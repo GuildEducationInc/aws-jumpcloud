@@ -7,5 +7,6 @@ setup(
     zip_safe=False,
     python_requires=">=3.6",
     install_requires=["requests", "BeautifulSoup4", "lxml", "boto3", "keyring"],
-    tests_require=["pycodestyle", "pylint"]
+    tests_require=["pycodestyle", "pylint"],
+    entry_points={'console_scripts': ['aws-jumpcloud = aws_jumpcloud.cli:main']}
 )
