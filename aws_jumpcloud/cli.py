@@ -37,8 +37,10 @@ def _build_parser():
     parser_add.set_defaults(func=_add_profile)
 
     parser_remove = subparsers.add_parser("remove", help="Removes a profile and any temporary IAM sessions")
-    parser_remove.add_argument("profile", help="Name of the profile")
-    parser_remove.set_defaults(func=_remove_profile)
+    parser_remove_mx = parser_remove.add_mutually_exclusive_group(required=True)
+    parser_remove_mx.add_argument("profile", help="Name of the profile", nargs="?")
+    parser_remove_mx.add_argument("--all", action="store_true", help="Revokes all temporary IAM sessions and deletes stored JumpCloud authentication information.")
+    parser_remove.set_defaults(func=_remove)
 
     parser_exec = subparsers.add_parser(
         "exec", help="Executes a command with AWS credentials in the environment")
@@ -49,12 +51,6 @@ def _build_parser():
     parser_rotate = subparsers.add_parser("rotate", help="Rotates temporary IAM session for an existing profile")
     parser_rotate.add_argument("profile", help="Name of the profile")
     parser_rotate.set_defaults(func=_rotate_session)
-
-    parser_revoke = subparsers.add_parser("revoke", help="Revokes any temporary IAM session for an existing profile, without removing the profile")
-    parser_revoke_mx = parser_revoke.add_mutually_exclusive_group(required=True)
-    parser_revoke_mx.add_argument("profile", help="Name of the profile", nargs="?")
-    parser_revoke_mx.add_argument("--all", action="store_true", help="Revokes all temporary IAM sessions and deletes stored JumpCloud authentication information.")
-    parser_revoke.set_defaults(func=_revoke)
 
     return parser
 
@@ -109,19 +105,23 @@ def _add_profile(args):
     print(f"Profile {args.profile} added.")
 
 
-def _remove_profile(args):
+def _remove(args):
     keyring = Keyring()
-    if not keyring.get_profile(args.profile):
-        print(f"Profile {args.profile} not found, nothing to do.")
-        sys.exit(0)
 
-    has_session = not not keyring.get_session(args.profile)
-    keyring.delete_session(args.profile)
-    keyring.delete_profile(args.profile)
-    if has_session:
-        print(f"Profile {args.profile} and temporary IAM session removed.")
+    if args.all:
+        keyring.delete_all_data()
+        print("")
+        print("All temporary IAM sessions and JumpCloud login information has been removed from your OS keychain.")
+    elif keyring.get_profile(args.profile):
+        has_session = not not keyring.get_session(args.profile)
+        keyring.delete_session(args.profile)
+        keyring.delete_profile(args.profile)
+        if has_session:
+            print(f"Profile {args.profile} and temporary IAM session removed.")
+        else:
+            print(f"Profile {args.profile} removed.")
     else:
-        print(f"Profile {args.profile} removed.")
+        print(f"Profile {args.profile} not found, nothing to do.")
 
 
 def _exec(args):
@@ -160,21 +160,6 @@ def _exec(args):
 
 
 def _rotate_session(args):
-    _revoke_session(args)
-    keyring = Keyring()
-    _login(keyring, profile)
-    session = keyring.get_session(args.profile)
-    print(f"AWS temporary session rotated; new session valid until {session.expires_at.strftime('%c %Z')}.")
-
-
-def _revoke(args):
-    if args.all:
-        return _revoke_all_credentials(args)
-    else:
-        return _revoke_session(args)
-
-
-def _revoke_session(args):
     keyring = Keyring()
     profile = keyring.get_profile(args.profile)
     if not profile:
@@ -184,12 +169,9 @@ def _revoke_session(args):
     keyring.delete_session(args.profile)
     print(f"Temporary IAM session for {args.profile} removed.")
 
-
-def _revoke_all_credentials(args):
-    keyring = Keyring()
-    keyring.delete_all_data()
-    print("")
-    print("All temporary IAM sessions and JumpCloud login information has been removed from your OS keychain.")
+    _login(keyring, profile)
+    session = keyring.get_session(args.profile)
+    print(f"AWS temporary session rotated; new session valid until {session.expires_at.strftime('%c %Z')}.")
 
 
 def _login(keyring, profile):
