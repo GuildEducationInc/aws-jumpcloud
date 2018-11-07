@@ -12,57 +12,16 @@ from aws_jumpcloud.keyring import Keyring
 from aws_jumpcloud.profile import Profile
 from aws_jumpcloud.saml import get_assertion_roles
 
-JUMPCLOUD_KEYCHAIN_NAME = "aws-jumpcloud"
-AWS_KEYCHAIN_NAME = "aws-jumpcloud temporary credentials"
+DESCRIPTION = "A vault for securely storing and accessing AWS credentials in development environments."
 
 
 def main():
     parser = _build_parser()
     args = parser.parse_args()
-    args.func(args)
-
-    # email = os.environ.get("JUMPCLOUD_EMAIL") or input("Enter your JumpCloud email address: ")
-    # password = get_password(email)
-
-    # j = JumpCloudSession(email, password)
-    # j.login()
-
-    # saml_assertion_xml = j.get_aws_saml_assertion()
-    # roles = get_assertion_roles(saml_assertion_xml)
-    # if len(roles) > 1:
-    #     print("Please select a role to assume:")
-    #     for i, role in enumerate(roles):
-    #         print(f"   {i + 1}. {role.role_arn}")
-    #     choice = input("Role: ")
-    #     role = roles[int(choice) - 1]
-    # else:
-    #     role = roles[0]
-
-    # creds = assume_role_with_saml(role, saml_assertion_xml)
-    # print("")
-    # print(f"# Credentials for {role.role_arn} (expires at {creds.expires_at.strftime('%c %Z')})")
-    # print(f"export AWS_ACCESS_KEY_ID={creds.access_key_id}")
-    # print(f"export AWS_SECRET_ACCESS_KEY={creds.secret_access_key}")
-    # print(f"export AWS_SESSION_TOKEN={creds.session_token}")
-    # print("")
-    # print(creds.dumps())
-
-
-# def get_password(email):
-#     password = keyring.get_password(JUMPCLOUD_KEYCHAIN_NAME, email)
-#     if password:
-#         print("Found your JumpCloud password in your macOS keychain.")
-#     else:
-#         password = getpass.getpass("Enter your JumpCloud password: ").strip()
-#         if len(password) == 0:
-#             return None
-#         resp = input("Would you like to store this in your macOS keychain [yes/no]? ")
-#         if resp.lower() == 'yes':
-#             keyring.set_password(JUMPCLOUD_KEYCHAIN_NAME, email, password)
-#     print("")
-#     return password
-
-DESCRIPTION = "A vault for securely storing and accessing AWS credentials in development environments."
+    try:
+        args.func(args)
+    except KeyboardInterrupt:
+        print("")
 
 
 def _build_parser():
@@ -101,13 +60,13 @@ def _list_profiles(args):
     output = []
     for profile in keyring.get_all_profiles():
         if profile.name in credentials:
-            expires_at = credentials[profile.name].expires_at.astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
+            expires_at = credentials[profile.name].expires_at.astimezone().strftime("%c %Z")
         else:
             expires_at = "<no active credentials>"
         output.append([profile.name, profile.aws_account_id, profile.aws_role,
                        profile.default_region, expires_at])
     _print_columns(["Profile", "AWS Account ID", "AWS Role", "AWS Region",
-                    "Temporary credentials expire at"], output)
+                    "Temporary credentials valid until"], output)
 
 
 def _print_columns(headers, rows):
@@ -140,9 +99,9 @@ def _add_profile(args):
         print("If you want to change the profile defaults, remove the profile and add it again.")
         sys.exit(1)
 
-    aws_account_id = input("AWS account ID: ").strip()
-    aws_role = input("AWS role: ").strip()
-    default_region = input("Default AWS region [us-west-2]: ").strip() or "us-west-2"
+    aws_account_id = input(f"Enter the AWS account ID for {args.profile}: ").strip()
+    aws_role = input(f"Enter the IAM role to assume for {args.profile}: ").strip()
+    default_region = input(f"Choose a default AWS region [us-west-2]: ").strip() or "us-west-2"
     keyring.store_profile(Profile(args.profile, aws_account_id, aws_role, default_region))
     print(f"Profile {args.profile} added.")
 
@@ -199,15 +158,7 @@ def _rotate_credentials(args):
     _login(keyring, profile)
     creds = keyring.get_credentials(args.profile)
 
-    print("")
-    print(f"# Credentials for {profile.role_arn} (expires at {creds.expires_at.strftime('%c %Z')})")
-    print(f"export AWS_ACCESS_KEY_ID={creds.access_key_id}")
-    print(f"export AWS_SECRET_ACCESS_KEY={creds.secret_access_key}")
-    print(f"export AWS_SESSION_TOKEN={creds.session_token}")
-    print(f"export AWS_SECURITY_TOKEN={creds.session_token}")
-    print(f"export AWS_DEFAULT_REGION={profile.default_region}")
-    print(f"export AWS_REGION={profile.default_region}")
-    print("")
+    print(f"AWS temporary credentials rotated; new credentials valid until {creds.expires_at.strftime('%c %Z')}.")
 
 
 def _login(keyring, profile):

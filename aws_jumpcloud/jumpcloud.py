@@ -23,7 +23,7 @@ class JumpCloudSession(object):
                    'X-Xsrftoken': self._get_xsrf_token()}
         data = {"email": self.email, "password": self.password}
         if self.otp_required:
-            data['otp'] = input("Multi-factor authentication code: ").strip()
+            data['otp'] = input("Enter your JumpCloud multi-factor auth code: ").strip()
         auth_resp = self.http.post("https://console.jumpcloud.com/userconsole/auth",
                                    headers=headers, json=data, allow_redirects=False,
                                    timeout=JumpCloudSession.HTTP_TIMEOUT)
