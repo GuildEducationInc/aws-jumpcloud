@@ -3,93 +3,123 @@ import json
 import keyring
 
 from aws_jumpcloud.aws import AWSCredentials
+from aws_jumpcloud.profile import Profile
 
 
-class Keychain(object):
-    def __init__(self, email, service="aws-jumpcloud"):
+class Keyring(object):
+    def __init__(self, service="aws-jumpcloud", username="credentials"):
         self._keyring_service = service
-        self._keyring_username = email
+        self._keyring_username = username
         self._jumpcloud_email = None
         self._jumpcloud_password = None
+        self._profiles = None
         self._aws_credentials = None
 
+    # Public methods for working with JumpCloud login credentials
+
     def get_jumpcloud_login(self):
-        """Retrieves the saved JumpCloud login from the OS keychain. Returns an
+        """Retrieves the saved JumpCloud login from the OS keyring. Returns an
         (email, password) tuple, or (None, None) if not found."""
         self._load()
         return (self._jumpcloud_email, self._jumpcloud_password)
 
-    def store_email_and_password(self, email, password):
-        """Stores the JumpCloud login credentials in the OS keychain."""
+    def store_jumpcloud_login(self, email, password):
+        """Stores the JumpCloud login credentials in the OS keyring."""
         self._load()
         self._jumpcloud_email = email
         self._jumpcloud_password = password
         self._save()
 
-    def list_aws_credentials(self):
-        """Returns all AWS credentials that are present in the OS keychain.
-        Expired credentials are automatically removed from the keychain and
+    # Public methods for working with AWS login profiles
+
+    def get_all_profiles(self):
+        self._load()
+        return self._profiles.values()
+
+    def get_profile(self, name):
+        self._load()
+        return self._profiles.get(name) or ""
+
+    def store_profile(self, profile):
+        self._load()
+        self._profiles[profile.name] = profile
+        self._save()
+
+    def delete_profile(self, name):
+        self._load()
+        if name in self._profiles:
+            del self._profiles[name]
+            self._save()
+
+    # Public methods for working with temporary AWS credentials
+
+    def get_all_credentials(self):
+        """Returns all AWS credentials that are present in the OS keyring.
+        Expired credentials are automatically removed from the keyring and
         filtered out of the results."""
         self._load()
         return self._aws_credentials
 
-    def get_credentials(self, profile):
+    def get_credentials(self, profile_name):
         """Returns AWS credentials for the given profile name. Returns None if
         not present, or expired. Expired credentials are automatically removed
-        from the keychain."""
+        from the OS keyring."""
         self._load()
-        return self._aws_credentials.get(profile) or None
+        return self._aws_credentials.get(profile_name) or None
 
-    def store_credentials(self, profile, creds):
-        """Stores the given AWS credentials in the OS keychain."""
+    def store_credentials(self, profile_name, creds):
+        """Stores the given AWS credentials in the OS keyring."""
         if creds.expired():
             return
         self._load()
-        self._aws_credentials[profile] = creds
+        self._aws_credentials[profile_name] = creds
         self._save()
 
-    def delete_credentials(self, profile):
-        """Removes the given AWS credentials from the OS keychain. Does nothing
+    def delete_credentials(self, profile_name):
+        """Removes the given AWS credentials from the OS keyring. Does nothing
         if the profile isn't already present."""
         self._load()
-        if profile not in self._aws_credentials:
+        if profile_name not in self._aws_credentials:
             return
-        del self._aws_credentials[profile]
+        del self._aws_credentials[profile_name]
         self._save()
 
+    # Private methods for working with the OS keychain
+
     def _load(self):
+        """Pulls data from the OS keyring into this object. Automatically
+        deletes any expired credentials found in the OS keyring."""
         json_data = keyring.get_password(self._keyring_service, self._keyring_username)
         if json_data is None:
             keyring_data = {}
         else:
             keyring_data = json.loads(json_data)
         self._jumpcloud_email = keyring_data.get("jumpcloud_email") or None
-        assert(self._jumpcloud_email is None or self._jumpcloud_email == self._keyring_username)
         self._jumpcloud_password = keyring_data.get("jumpcloud_password") or None
+
+        self._profiles = {}
+        for profile_str in keyring_data.get("profiles", []):
+            profile = Profile.loads(profile_str)
+            self._profiles[profile.name] = profile
         self._aws_credentials = {}
+        expired_creds = 0
         for (profile, creds_str) in keyring_data.get("aws_credentials", {}).items():
-            self._aws_credentials[profile] = AWSCredentials.loads(creds_str)
-        self.loaded = True
-        self._remove_expired_creds()
+            creds = AWSCredentials.loads(creds_str)
+            if creds.expired():
+                # Don't save expired creds in the dict, and note that we found
+                # expired creds so that we can remove them from the OS keyring
+                expired_creds += 1
+            else:
+                self._aws_credentials[profile] = creds
+        if expired_creds > 0:
+            self._save()
 
     def _save(self):
-        data = {"jumpcloud_email": self._jumpcloud_email,
-                "jumpcloud_password": self._jumpcloud_password,
-                "aws_credentials": dict([(k, v.dumps()) for (k, v) in self._aws_credentials.items()])}
+        """Pushes data from this object into the OS keyring."""
         json_data = json.dumps({
             "jumpcloud_email": self._jumpcloud_email,
             "jumpcloud_password": self._jumpcloud_password,
+            "profiles": [p.dumps() for p in self._profiles.values()],
             "aws_credentials": dict([(k, v.dumps()) for (k, v) in self._aws_credentials.items()])
         })
         keyring.set_password(self._keyring_service, self._keyring_username, json_data)
-
-    def _remove_expired_creds(self):
-        if not self.loaded:
-            self._load()
-        dirty = False
-        for profile in list(self._aws_credentials.keys()):
-            if self._aws_credentials[profile].expired():
-                del self._aws_credentials[profile]
-                dirty = True
-        if dirty:
-            self._save()

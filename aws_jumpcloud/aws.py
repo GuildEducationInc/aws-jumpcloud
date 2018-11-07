@@ -1,8 +1,15 @@
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
 
 import boto3
+
+# The default duration for an STS session is 15 minutes. This must be within
+# the role's MaxSessionDuration, but we can't validate that in advance of
+# attempting to call AssumeRole, so we'll leave it at 15 minutes. The actual
+# duration for a session will be lesser of this or the SAML assertion's
+# SessionDuration.
+SESSION_DURATION = timedelta(minutes=15)
 
 
 class AWSCredentials(object):
@@ -17,7 +24,7 @@ class AWSCredentials(object):
         self.expires_at = expires_at
 
     def expired(self):
-        return self.expires_at < datetime.utcnow()
+        return self.expires_at < datetime.now(timezone.utc)
 
     def dumps(self):
         return json.dumps({"access_key_id": self.access_key_id,
@@ -28,20 +35,17 @@ class AWSCredentials(object):
     @classmethod
     def loads(cls, json_string):
         data = json.loads(json_string)
-        data['expires_at'] = datetime.utcfromtimestamp(data['expires_at'])
+        data['expires_at'] = datetime.fromtimestamp(data['expires_at'], tz=timezone.utc)
         return AWSCredentials(**data)
 
 
 def assume_role_with_saml(saml_role, saml_assertion_xml):
-    # DurationSeconds defaults to 15 minutes. Must be <= the role's
-    # MaxSessionDuration; actual duration will be lesser of this or the SAML
-    # assertion's SessionDuration
     client = boto3.client('sts')
     sts_resp = client.assume_role_with_saml(
         RoleArn=saml_role.role_arn,
         PrincipalArn=saml_role.principal_arn,
         SAMLAssertion=base64.b64encode(saml_assertion_xml).decode("ascii"),
-        DurationSeconds=43200
+        DurationSeconds=int(SESSION_DURATION.total_seconds())
     )
     assert(sts_resp['ResponseMetadata']['HTTPStatusCode'] == 200)
 
