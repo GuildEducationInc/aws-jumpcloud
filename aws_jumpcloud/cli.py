@@ -136,6 +136,21 @@ def _exec(args):
         session = keyring.get_session(args.profile)
         print("")
 
+    # Find the full path to the program that the user wants to run, otherwise
+    # subprocess.run() won't be able to find it. (I'm not sure exactly why this
+    # happens -- it looks like subprocess.run() has a path with /usr/bin but not
+    # /usr/local/bin?)
+    result = subprocess.run(["which", args.command[0]], stdout=PIPE)
+    if result.returncode == 0 and len(result.stdout.strip()) > 0:
+        args.command[0] = result.stdout.strip()
+    elif result.returncode == 1:
+        print(f"{args.command[0]}: command not found")
+        sys.exit(127)
+    else:
+        if len(result.stdout.strip()) > 0:
+            print(result.stdout.strip())
+        sys.exit(result.returncode)
+
     # Run the command that the user wanted, with AWS credentials in the environment
     env = {'AWS_ACCESS_KEY_ID': session.access_key_id,
            'AWS_SECRET_ACCESS_KEY': session.secret_access_key,
