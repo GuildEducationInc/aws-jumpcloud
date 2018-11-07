@@ -2,17 +2,17 @@ import json
 
 
 class Profile(object):
-    def __init__(self, name, aws_account_id, aws_role, default_region):
+    def __init__(self, name, aws_account_id, aws_role, aws_account_alias=None):
         self.name = name
         self.aws_account_id = aws_account_id
         self.aws_role = aws_role
-        self.default_region = default_region
+        self.aws_account_alias = aws_account_alias
 
     def dumps(self):
         return json.dumps({"name": self.name,
                            "aws_account_id": self.aws_account_id,
-                           "aws_role": self.aws_role,
-                           "default_region": self.default_region})
+                           "aws_account_alias": self.aws_account_alias,
+                           "aws_role": self.aws_role})
 
     @property
     def role_arn(self):

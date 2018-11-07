@@ -6,7 +6,7 @@ import sys
 import subprocess
 from subprocess import PIPE
 
-from aws_jumpcloud.aws import AWSCredentials, assume_role_with_saml
+from aws_jumpcloud.aws import assume_role_with_saml, get_account_alias
 from aws_jumpcloud.jumpcloud import JumpCloudSession
 from aws_jumpcloud.keyring import Keyring
 from aws_jumpcloud.profile import Profile
@@ -36,7 +36,7 @@ def _build_parser():
     parser_add.add_argument("profile", help="Name of the profile")
     parser_add.set_defaults(func=_add_profile)
 
-    parser_remove = subparsers.add_parser("remove", help="Removes a profile and any sessions")
+    parser_remove = subparsers.add_parser("remove", help="Removes a profile and any temporary IAM sessions")
     parser_remove.add_argument("profile", help="Name of the profile")
     parser_remove.set_defaults(func=_remove_profile)
 
@@ -46,9 +46,15 @@ def _build_parser():
     parser_exec.add_argument("command", nargs="+")
     parser_exec.set_defaults(func=_exec)
 
-    parser_rotate = subparsers.add_parser("rotate", help="Rotates credentials for an existing profile")
+    parser_rotate = subparsers.add_parser("rotate", help="Rotates temporary IAM session for an existing profile")
     parser_rotate.add_argument("profile", help="Name of the profile")
-    parser_rotate.set_defaults(func=_rotate_credentials)
+    parser_rotate.set_defaults(func=_rotate_session)
+
+    parser_revoke = subparsers.add_parser("revoke", help="Revokes any temporary IAM session for an existing profile, without removing the profile")
+    parser_revoke_mx = parser_revoke.add_mutually_exclusive_group(required=True)
+    parser_revoke_mx.add_argument("profile", help="Name of the profile", nargs="?")
+    parser_revoke_mx.add_argument("--all", action="store_true", help="Revokes all temporary IAM sessions and deletes stored JumpCloud authentication information.")
+    parser_revoke.set_defaults(func=_revoke)
 
     return parser
 
@@ -56,17 +62,23 @@ def _build_parser():
 def _list_profiles(args):
     keyring = Keyring()
     profiles = keyring.get_all_profiles()
-    credentials = keyring.get_all_credentials()
+    if len(profiles) == 0:
+        print("")
+        print("No profiles found. Use \"aws-jumpcloud add <profile>\" to store a new profile.")
+        sys.exit(0)
+    sessions = keyring.get_all_sessions()
     output = []
     for profile in keyring.get_all_profiles():
-        if profile.name in credentials:
-            expires_at = credentials[profile.name].expires_at.astimezone().strftime("%c %Z")
+        if profile.aws_account_alias:
+            aws_account_desc = f"{profile.aws_account_alias} ({profile.aws_account_id})"
         else:
-            expires_at = "<no active credentials>"
-        output.append([profile.name, profile.aws_account_id, profile.aws_role,
-                       profile.default_region, expires_at])
-    _print_columns(["Profile", "AWS Account ID", "AWS Role", "AWS Region",
-                    "Temporary credentials valid until"], output)
+            aws_account_desc = profile.aws_account_id
+        if profile.name in sessions:
+            expires_at = sessions[profile.name].expires_at.astimezone().strftime("%c %Z")
+        else:
+            expires_at = "<no active session>"
+        output.append([profile.name, aws_account_desc, profile.aws_role, expires_at])
+    _print_columns(["Profile", "AWS Account", "AWS Role", "IAM session expires"], output)
 
 
 def _print_columns(headers, rows):
@@ -77,19 +89,10 @@ def _print_columns(headers, rows):
         for i, value in enumerate(row):
             sizes[i] = max(sizes[i], len(value) + 2)
 
-    for size, value in zip(sizes, headers):
-        sys.stdout.write(value.ljust(size + 2))
-    sys.stdout.write("\n")
-    for size in sizes:
-        sys.stdout.write("=" * size)
-        sys.stdout.write("  ")
-    sys.stdout.write("\n")
-    sys.stdout.flush()
+    print("".join([value.ljust(size + 2) for size, value in zip(sizes, headers)]))
+    print("  ".join(["=" * size for size in sizes]))
     for row in rows:
-        for size, value in zip(sizes, row):
-            sys.stdout.write(value.ljust(size + 2))
-        sys.stdout.write("\n")
-        sys.stdout.flush()
+        print("".join([value.ljust(size + 2) for size, value in zip(sizes, row)]))
 
 
 def _add_profile(args):
@@ -101,8 +104,8 @@ def _add_profile(args):
 
     aws_account_id = input(f"Enter the AWS account ID for {args.profile}: ").strip()
     aws_role = input(f"Enter the IAM role to assume for {args.profile}: ").strip()
-    default_region = input(f"Choose a default AWS region [us-west-2]: ").strip() or "us-west-2"
-    keyring.store_profile(Profile(args.profile, aws_account_id, aws_role, default_region))
+    profile = Profile(args.profile, aws_account_id, aws_role)
+    keyring.store_profile(profile)
     print(f"Profile {args.profile} added.")
 
 
@@ -112,11 +115,11 @@ def _remove_profile(args):
         print(f"Profile {args.profile} not found, nothing to do.")
         sys.exit(0)
 
-    has_credentials = not not keyring.get_credentials(args.profile)
-    keyring.delete_credentials(args.profile)
+    has_session = not not keyring.get_session(args.profile)
+    keyring.delete_session(args.profile)
     keyring.delete_profile(args.profile)
-    if has_credentials:
-        print(f"Profile {args.profile} and temporary credentials removed.")
+    if has_session:
+        print(f"Profile {args.profile} and temporary IAM session removed.")
     else:
         print(f"Profile {args.profile} removed.")
 
@@ -127,38 +130,52 @@ def _exec(args):
     if not profile:
         print(f"Error: Profile {args.profile} not found; you must add it first.")
         sys.exit(1)
-    creds = keyring.get_credentials(args.profile)
-    if not creds:
+    session = keyring.get_session(args.profile)
+    if not session:
         _login(keyring, profile)
-        creds = keyring.get_credentials(args.profile)
+        session = keyring.get_session(args.profile)
+        print("")
 
-    env = {'AWS_ACCESS_KEY_ID': creds.access_key_id,
-           'AWS_SECRET_ACCESS_KEY': creds.secret_access_key,
-           'AWS_SECURITY_TOKEN': creds.session_token,
-           'AWS_SESSION_TOKEN': creds.session_token,
-           'AWS_DEFAULT_REGION': profile.default_region,
-           'AWS_REGION': profile.default_region}
-
-    # run the command given on the command line
-    print("running command")
+    # Run the command that the user wanted, with AWS credentials in the environment
+    env = {'AWS_ACCESS_KEY_ID': session.access_key_id,
+           'AWS_SECRET_ACCESS_KEY': session.secret_access_key,
+           'AWS_SECURITY_TOKEN': session.session_token,
+           'AWS_SESSION_TOKEN': session.session_token}
     result = subprocess.run(args.command, env=env)
-    print(f"exiting with status code {result.returncode}")
     sys.exit(result.returncode)
 
 
-def _rotate_credentials(args):
+def _rotate_session(args):
+    _revoke_session(args)
+    keyring = Keyring()
+    _login(keyring, profile)
+    session = keyring.get_session(args.profile)
+    print(f"AWS temporary session rotated; new session valid until {session.expires_at.strftime('%c %Z')}.")
+
+
+def _revoke(args):
+    if args.all:
+        return _revoke_all_credentials(args)
+    else:
+        return _revoke_session(args)
+
+
+def _revoke_session(args):
     keyring = Keyring()
     profile = keyring.get_profile(args.profile)
     if not profile:
         print(f"Error: Profile {args.profile} not found.")
         sys.exit(1)
 
-    keyring.delete_credentials(args.profile)
-    print(f"Credentials for {args.profile} removed.")
-    _login(keyring, profile)
-    creds = keyring.get_credentials(args.profile)
+    keyring.delete_session(args.profile)
+    print(f"Temporary IAM session for {args.profile} removed.")
 
-    print(f"AWS temporary credentials rotated; new credentials valid until {creds.expires_at.strftime('%c %Z')}.")
+
+def _revoke_all_credentials(args):
+    keyring = Keyring()
+    keyring.delete_all_data()
+    print("")
+    print("All temporary IAM sessions and JumpCloud login information has been removed from your OS keychain.")
 
 
 def _login(keyring, profile):
@@ -176,11 +193,20 @@ def _login(keyring, profile):
     session.login()
     # TODO handle various exceptions
 
+    print("Attempting SSO authentication to Amazon Web Services...")
     saml_assertion = session.get_aws_saml_assertion()
     roles = get_assertion_roles(saml_assertion)
     assert(len(roles) == 1)
     role = roles[0]  # TODO make this work with more than one role in the assertion
 
-    creds = assume_role_with_saml(role, saml_assertion)
-    keyring.store_credentials(profile.name, creds)
-    return creds
+    session = assume_role_with_saml(role, saml_assertion)
+    keyring.store_session(profile.name, session)
+
+    # Update the AWS account alias on each login
+    alias = get_account_alias(session)
+    if alias != profile.aws_account_alias:
+        profile.aws_account_alias = alias
+        keyring.store_profile(profile)
+
+    print("")
+    return session

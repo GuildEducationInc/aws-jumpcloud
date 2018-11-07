@@ -12,7 +12,7 @@ import boto3
 SESSION_DURATION = timedelta(minutes=15)
 
 
-class AWSCredentials(object):
+class AWSSession(object):
     def __init__(self, access_key_id, secret_access_key, session_token, expires_at):
         assert(isinstance(access_key_id, str))
         assert(isinstance(secret_access_key, str))
@@ -36,7 +36,7 @@ class AWSCredentials(object):
     def loads(cls, json_string):
         data = json.loads(json_string)
         data['expires_at'] = datetime.fromtimestamp(data['expires_at'], tz=timezone.utc)
-        return AWSCredentials(**data)
+        return AWSSession(**data)
 
 
 def assume_role_with_saml(saml_role, saml_assertion_xml):
@@ -49,7 +49,26 @@ def assume_role_with_saml(saml_role, saml_assertion_xml):
     )
     assert(sts_resp['ResponseMetadata']['HTTPStatusCode'] == 200)
 
-    return AWSCredentials(access_key_id=sts_resp['Credentials']['AccessKeyId'],
-                          secret_access_key=sts_resp['Credentials']['SecretAccessKey'],
-                          session_token=sts_resp['Credentials']['SessionToken'],
-                          expires_at=sts_resp['Credentials']['Expiration'])
+    return AWSSession(access_key_id=sts_resp['Credentials']['AccessKeyId'],
+                      secret_access_key=sts_resp['Credentials']['SecretAccessKey'],
+                      session_token=sts_resp['Credentials']['SessionToken'],
+                      expires_at=sts_resp['Credentials']['Expiration'])
+
+
+def get_account_alias(session):
+    client = boto3.client("iam", aws_access_key_id=session.access_key_id,
+                          aws_secret_access_key=session.secret_access_key,
+                          aws_session_token=session.session_token)
+    resp = client.list_account_aliases()
+    assert(resp['ResponseMetadata']['HTTPStatusCode'] == 200)
+    return resp['AccountAliases'][0] if resp['AccountAliases'] else None
+    try:
+        client = boto3.client("iam", access_key_id=session.access_key_id,
+                              secret_access_key=session.secret_access_key,
+                              session_token=session.session_token)
+        resp = client.list_account_aliases()
+        assert(resp['ResponseMetadata']['HTTPStatusCode'] == 200)
+        return resp['AccountAliases'][0] if resp['AccountAliases'] else None
+    except:
+        # This is optional functionality, so ignore exceptions
+        return None
