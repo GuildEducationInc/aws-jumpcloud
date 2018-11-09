@@ -47,7 +47,7 @@ class Keyring(object):
 
     def get_all_profiles(self):
         self._load()
-        return self._profiles.values()
+        return self._profiles
 
     def get_profile(self, name):
         self._load()

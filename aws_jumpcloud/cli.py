@@ -65,7 +65,7 @@ def _list_profiles(args):
         sys.exit(0)
     sessions = keyring.get_all_sessions()
     output = []
-    for profile in keyring.get_all_profiles():
+    for profile in profiles.values():
         aws_account_desc = profile.aws_account_alias or profile.aws_account_id or "<unknown>"
         aws_role = profile.aws_role or "<unknown>"
         if profile.name in sessions:
