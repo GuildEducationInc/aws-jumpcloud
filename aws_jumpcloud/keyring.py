@@ -23,24 +23,24 @@ class Keyring(object):
 
     # Public methods for working with JumpCloud login credentials
 
-    def get_jumpcloud_login(self):
-        """Retrieves the saved JumpCloud login from the OS keyring. Returns an
-        (email, password) tuple, or (None, None) if not found."""
+    @property
+    def jumpcloud_email(self):
         self._load()
-        return (self._jumpcloud_email, self._jumpcloud_password)
+        return self._jumpcloud_email
 
-    def store_jumpcloud_login(self, email, password):
-        """Stores the JumpCloud login credentials in the OS keyring."""
+    @jumpcloud_email.setter(self, value):
         self._load()
-        self._jumpcloud_email = email
-        self._jumpcloud_password = password
+        self._jumpcloud_email = value
         self._save()
 
-    def delete_jumpcloud_login(self):
-        """Removes the JumpCloud login credentials from the OS keyring."""
+    @property
+    def jumpcloud_password(self):
         self._load()
-        self._jumpcloud_email = None
-        self._jumpcloud_password = None
+        return self._jumpcloud_password
+
+    @jumpcloud_password.setter(self, value):
+        self._load()
+        self._jumpcloud_password = value
         self._save()
 
     # Public methods for working with AWS login profiles

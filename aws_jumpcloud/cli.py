@@ -178,14 +178,12 @@ def _rotate_session(args):
 
 
 def _login(keyring, profile):
-    email, password = keyring.get_jumpcloud_login()
-    dirty = False
+    email, password = keyring.jumpcloud_email, keyring.jumpcloud_password
     if email and password:
         print("Using JumpCloud login details from your OS keychain.")
-    if not email or not password:
-        email = input("Enter your JumpCloud email address: ").strip()
-        password = getpass.getpass("Enter your JumpCloud password: ").strip()
-        keyring.store_jumpcloud_login(email, password)
+    else:
+        email = keyring.jumpcloud_email = input("Enter your JumpCloud email address: ").strip()
+        password = keyring.jumpcloud_password = getpass.getpass("Enter your JumpCloud password: ").strip()
         print("JumpCloud login details saved in your OS keychain.")
 
     session = JumpCloudSession(email, password)
@@ -194,7 +192,8 @@ def _login(keyring, profile):
     except JumpCloudError as e:
         print(f"\nError: {e.message}")
         if isinstance(e, JumpCloudAuthFailure):
-            keyring.delete_jumpcloud_login()
+            keyring.set_jumpcloud_email(None)
+            keyring.set_jumpcloud_password(None)
             print("- You will be prompted for your username and password the next time you try.")
         elif isinstance(e, JumpCloudServerError):
             error_msg = e.jumpcloud_error_message or e.response.text
