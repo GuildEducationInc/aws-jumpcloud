@@ -1,13 +1,15 @@
 from argparse import ArgumentParser
 from datetime import datetime
 import getpass
+from json import JSONDecodeError
 import os
 import sys
 import subprocess
 from subprocess import PIPE
 
 from aws_jumpcloud.aws import assume_role_with_saml, get_account_alias, parse_arn
-from aws_jumpcloud.jumpcloud import JumpCloudSession
+from aws_jumpcloud.jumpcloud import JumpCloudSession, JumpCloudError, JumpCloudAuthFailure
+from aws_jumpcloud.jumpcloud import JumpCloudServerError, JumpCloudUnexpectedResponse
 from aws_jumpcloud.keyring import Keyring
 from aws_jumpcloud.profile import Profile
 from aws_jumpcloud.saml import get_assertion_roles
@@ -26,7 +28,6 @@ def main():
 
 def _build_parser():
     parser = ArgumentParser(description=DESCRIPTION)
-    parser.add_argument("--debug", action="store_true", help="Show debugging output")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     parser_list = subparsers.add_parser("list", help="List profiles and their sessions")
@@ -72,6 +73,7 @@ def _list_profiles(args):
         else:
             expires_at = "<no active session>"
         output.append([profile.name, aws_account_desc, aws_role, expires_at])
+    print("")
     _print_columns(["Profile", "AWS Account", "AWS Role", "IAM session expires"], output)
 
 
@@ -187,8 +189,19 @@ def _login(keyring, profile):
         print("JumpCloud login details saved in your OS keychain.")
 
     session = JumpCloudSession(email, password)
-    session.login()
-    # TODO handle various exceptions neatly
+    try:
+        session.login()
+    except JumpCloudError as e:
+        print(f"\nError: {e.message}")
+        if isinstance(e, JumpCloudAuthFailure):
+            keyring.delete_jumpcloud_login()
+            print("- You will be prompted for your username and password the next time you run exec or rotate.")
+        elif isinstance(e, JumpCloudServerError):
+            error_msg = e.jumpcloud_error_message or e.response.text
+            print(f"- JumpCloud error message: {error_msg}")
+        elif isinstance(e, JumpCloudUnexpectedResponse):
+            print(f"- JumpCloud response body: {e.response.text}")
+        sys.exit(1)
 
     print("Attempting SSO authentication to Amazon Web Services...")
     saml_assertion = session.get_aws_saml_assertion(profile)

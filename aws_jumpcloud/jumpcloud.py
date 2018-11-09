@@ -1,5 +1,5 @@
 import base64
-import json
+from json import JSONDecodeError
 
 from bs4 import BeautifulSoup  # pylint: disable=E0401
 from requests import Request as HTTPRequest, Session as HTTPSession
@@ -8,35 +8,41 @@ from requests import Request as HTTPRequest, Session as HTTPSession
 class JumpCloudSession(object):
     HTTP_TIMEOUT = 5
 
-    def __init__(self, email, password, otp_required=False):
+    def __init__(self, email, password):
         self.email = email
         self.password = password
-        self.otp_required = otp_required
         self.http = HTTPSession()
         self.logged_in = False
         self.xsrf_token = None
 
     def login(self):
+        try:
+            self._authenticate()
+        except JumpCloudMFARequired:
+            otp = input("Enter your JumpCloud multi-factor auth code: ").strip()
+            self._authenticate(otp=otp)
+
+    def _authenticate(self, otp=None):
         assert(not self.logged_in)
         headers = {'Content-Type': 'application/json',
                    'X-Requested-With': 'XMLHttpRequest',
                    'X-Xsrftoken': self._get_xsrf_token()}
         data = {"email": self.email, "password": self.password}
-        if self.otp_required:
-            data['otp'] = input("Enter your JumpCloud multi-factor auth code: ").strip()
+        if otp is not None:
+            data['otp'] = otp
         auth_resp = self.http.post("https://console.jumpcloud.com/userconsole/auth",
                                    headers=headers, json=data, allow_redirects=False,
                                    timeout=JumpCloudSession.HTTP_TIMEOUT)
         if auth_resp.status_code == 200:
             self.logged_in = True
-            return
-        elif auth_resp.status_code == 302 and "error=4014" in auth_resp.headers['Location']:
-            if self.otp_required:
-                raise JumpCloudMFAFailure(auth_resp)
-            else:
-                self.otp_required = True
-                self.login()
+        elif otp is None and auth_resp.status_code == 302 and "error=4014" in auth_resp.headers['Location']:
+            raise JumpCloudMFARequired(auth_resp)
         elif auth_resp.status_code == 401:
+            try:
+                if otp is not None and "multifactor" in auth_resp.json().get("error"):
+                    raise JumpCloudMFAFailure(auth_resp)
+            except JSONDecodeError:
+                pass
             raise JumpCloudAuthFailure(auth_resp)
         elif auth_resp.status_code > 500:
             raise JumpCloudServerError(auth_resp)
@@ -52,8 +58,6 @@ class JumpCloudSession(object):
         return self.xsrf_token
 
     def get_aws_saml_assertion(self, profile):
-        # TODO: Try using this with more than one AWS integration (the multi-
-        # role code hasn't been tested)
         assert(self.logged_in)
         aws_resp = self.http.get(profile.jumpcloud_url)
         assert(aws_resp.status_code == 200)
@@ -72,7 +76,12 @@ class JumpCloudSession(object):
 class JumpCloudError(Exception):
     def __init__(self, message, resp):
         Exception.__init__(self, message)
+        self.message = message
         self.response = resp
+        try:
+            self.jumpcloud_error_message = resp.json().get("error")
+        except JSONDecodeError:
+            self.jumpcloud_error_message = None
 
 
 class JumpCloudServerError(JumpCloudError):
@@ -84,16 +93,18 @@ class JumpCloudServerError(JumpCloudError):
 class JumpCloudAuthFailure(JumpCloudError):
     def __init__(self, resp=None):
         message = "JumpCloud authentication failed. Check your username and password and try again."
-        if resp and resp.headers['Content-Type'] == 'application/json':
-            data = resp.json()
-            if "error" in data:
-                message = data['error']
         JumpCloudError.__init__(self, message, resp)
 
 
 class JumpCloudMFAFailure(JumpCloudError):
     def __init__(self, resp):
         message = "Multi-factor authentication failed. Check your MFA token and try again."
+        JumpCloudError.__init__(self, message, resp)
+
+
+class JumpCloudMFARequired(JumpCloudError):
+    def __init__(self, resp):
+        message = "Multi-factor authentication is required on your JumpCloud account."
         JumpCloudError.__init__(self, message, resp)
 
 

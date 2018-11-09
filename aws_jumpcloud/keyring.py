@@ -36,6 +36,13 @@ class Keyring(object):
         self._jumpcloud_password = password
         self._save()
 
+    def delete_jumpcloud_login(self):
+        """Removes the JumpCloud login credentials from the OS keyring."""
+        self._load()
+        self._jumpcloud_email = None
+        self._jumpcloud_password = None
+        self._save()
+
     # Public methods for working with AWS login profiles
 
     def get_all_profiles(self):
