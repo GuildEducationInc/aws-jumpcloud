@@ -17,7 +17,8 @@ class Keyring(object):
 
     # Public method for removing the entire OS keyring object
     def delete_all_data(self):
-        keyring.delete_password(self._keyring_service, self._keyring_username)
+        if keyring.get_password(self._keyring_service, self._keyring_username) is not None:
+            keyring.delete_password(self._keyring_service, self._keyring_username)
         self._load()
 
     # Public methods for working with JumpCloud login credentials

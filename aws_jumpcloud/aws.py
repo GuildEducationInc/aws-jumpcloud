@@ -1,8 +1,14 @@
 import base64
+from collections import namedtuple
 from datetime import datetime, timedelta, timezone
 import json
+import re
 
 import boto3
+
+# Regular expression to extract an account number and role name from an ARN.
+ROLE_ARN_REGEXP = re.compile(r"^arn:aws:iam::([0-9]{12}):role/([\w+=,.@-]+)$")
+ParseResult = namedtuple("ArnParts", ["aws_account_id", "aws_role"])
 
 # The default duration for an STS session is 15 minutes. This must be within
 # the role's MaxSessionDuration, but we can't validate that in advance of
@@ -72,3 +78,7 @@ def get_account_alias(session):
     except:
         # This is optional functionality, so ignore exceptions
         return None
+
+
+def parse_arn(role_arn):
+    return ParseResult(*ROLE_ARN_REGEXP.match(role_arn).groups())

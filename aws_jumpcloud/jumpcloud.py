@@ -51,11 +51,11 @@ class JumpCloudSession(object):
             self.xsrf_token = xsrf_resp.json().get("xsrf")
         return self.xsrf_token
 
-    def get_aws_saml_assertion(self):
+    def get_aws_saml_assertion(self, profile):
         # TODO: Try using this with more than one AWS integration (the multi-
         # role code hasn't been tested)
         assert(self.logged_in)
-        aws_resp = self.http.get("https://sso.jumpcloud.com/saml2/aws")
+        aws_resp = self.http.get(profile.jumpcloud_url)
         assert(aws_resp.status_code == 200)
         assert("SAMLResponse" in aws_resp.text)
         return self._extract_saml_response(aws_resp.text)

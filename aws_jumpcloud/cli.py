@@ -6,7 +6,7 @@ import sys
 import subprocess
 from subprocess import PIPE
 
-from aws_jumpcloud.aws import assume_role_with_saml, get_account_alias
+from aws_jumpcloud.aws import assume_role_with_saml, get_account_alias, parse_arn
 from aws_jumpcloud.jumpcloud import JumpCloudSession
 from aws_jumpcloud.keyring import Keyring
 from aws_jumpcloud.profile import Profile
@@ -65,15 +65,13 @@ def _list_profiles(args):
     sessions = keyring.get_all_sessions()
     output = []
     for profile in keyring.get_all_profiles():
-        if profile.aws_account_alias:
-            aws_account_desc = f"{profile.aws_account_alias} ({profile.aws_account_id})"
-        else:
-            aws_account_desc = profile.aws_account_id
+        aws_account_desc = profile.aws_account_alias or profile.aws_account_id or "<unknown>"
+        aws_role = profile.aws_role or "<unknown>"
         if profile.name in sessions:
             expires_at = sessions[profile.name].expires_at.astimezone().strftime("%c %Z")
         else:
             expires_at = "<no active session>"
-        output.append([profile.name, aws_account_desc, profile.aws_role, expires_at])
+        output.append([profile.name, aws_account_desc, aws_role, expires_at])
     _print_columns(["Profile", "AWS Account", "AWS Role", "IAM session expires"], output)
 
 
@@ -98,9 +96,11 @@ def _add_profile(args):
         print("If you want to change the profile defaults, remove the profile and add it again.")
         sys.exit(1)
 
-    aws_account_id = input(f"Enter the AWS account ID for {args.profile}: ").strip()
-    aws_role = input(f"Enter the IAM role to assume for {args.profile}: ").strip()
-    profile = Profile(args.profile, aws_account_id, aws_role)
+    jumpcloud_url = input(f"Enter the JumpCloud SSO URL for {args.profile}: ").strip()
+    if not jumpcloud_url.startswith("https://sso.jumpcloud.com/saml2/"):
+        print("Error: Not a valid JumpCloud SSO URL, must start with https://sso.jumpcloud.com/saml2/.")
+        sys.exit(1)
+    profile = Profile(args.profile, jumpcloud_url)
     keyring.store_profile(profile)
     print(f"Profile {args.profile} added.")
 
@@ -111,7 +111,8 @@ def _remove(args):
     if args.all:
         keyring.delete_all_data()
         print("")
-        print("All temporary IAM sessions and JumpCloud login information has been removed from your OS keychain.")
+        print("All configuration profiles, temporary IAM sessions, and JumpCloud login")
+        print("credentials have been removed from your OS keychain.")
     elif keyring.get_profile(args.profile):
         has_session = not not keyring.get_session(args.profile)
         keyring.delete_session(args.profile)
@@ -187,13 +188,25 @@ def _login(keyring, profile):
 
     session = JumpCloudSession(email, password)
     session.login()
-    # TODO handle various exceptions
+    # TODO handle various exceptions neatly
 
     print("Attempting SSO authentication to Amazon Web Services...")
-    saml_assertion = session.get_aws_saml_assertion()
+    saml_assertion = session.get_aws_saml_assertion(profile)
     roles = get_assertion_roles(saml_assertion)
     assert(len(roles) == 1)
-    role = roles[0]  # TODO make this work with more than one role in the assertion
+    role = roles[0]
+
+    # TODO it's a valid JumpCloud configuration to present more than one role
+    # in the assertion; we should handle that properly at some point.
+
+    # Update the AWS account ID and role name if they've changed
+    r = parse_arn(role.role_arn)
+    if profile.aws_account_id != r.aws_account_id:
+        profile.aws_account_id = r.aws_account_id
+        keyring.store_profile(profile)
+    if profile.aws_role != r.aws_role:
+        profile.aws_role = r.aws_role
+        keyring.store_profile(profile)
 
     session = assume_role_with_saml(role, saml_assertion)
     keyring.store_session(profile.name, session)
