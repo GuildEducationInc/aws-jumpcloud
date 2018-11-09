@@ -2,7 +2,7 @@ import base64
 from json import JSONDecodeError
 
 from bs4 import BeautifulSoup  # pylint: disable=E0401
-from requests import Request as HTTPRequest, Session as HTTPSession
+from requests import Session as HTTPSession
 
 
 class JumpCloudSession(object):
@@ -96,21 +96,21 @@ class JumpCloudAuthFailure(JumpCloudError):
         JumpCloudError.__init__(self, message, resp)
 
 
-class JumpCloudMFAFailure(JumpCloudError):
-    def __init__(self, resp):
-        message = "Multi-factor authentication failed. Check your MFA token and try again."
-        JumpCloudError.__init__(self, message, resp)
-
-
 class JumpCloudMFARequired(JumpCloudError):
     def __init__(self, resp):
         message = "Multi-factor authentication is required on your JumpCloud account."
         JumpCloudError.__init__(self, message, resp)
 
 
+class JumpCloudMFAFailure(JumpCloudError):
+    def __init__(self, resp):
+        message = "Multi-factor authentication failed. Check your MFA token and try again."
+        JumpCloudError.__init__(self, message, resp)
+
+
 class JumpCloudUnexpectedResponse(JumpCloudError):
-    # Indicates a response that we weren't expecting, i.e. that JumpCloud
-    # changed their auth workflow or we didn't reverse-engineer it properly.
+    """Indicates a response that we weren't expecting, i.e. that JumpCloud
+    changed their auth workflow or we didn't reverse-engineer it properly."""
     def __init__(self, resp):
         message = f"JumpCloud returned unexpected HTTP {resp.status_code} response"
         JumpCloudError.__init__(self, message, resp)

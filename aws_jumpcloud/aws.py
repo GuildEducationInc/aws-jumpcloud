@@ -75,7 +75,7 @@ def get_account_alias(session):
         resp = client.list_account_aliases()
         assert(resp['ResponseMetadata']['HTTPStatusCode'] == 200)
         return resp['AccountAliases'][0] if resp['AccountAliases'] else None
-    except:
+    except Exception:
         # This is optional functionality, so ignore exceptions
         return None
 

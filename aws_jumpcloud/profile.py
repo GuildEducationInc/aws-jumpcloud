@@ -9,18 +9,18 @@ class Profile(object):
         self.aws_role = aws_role
         self.aws_account_alias = aws_account_alias
 
+    @property
+    def role_arn(self):
+        assert(self.aws_account_id is not None)
+        assert(self.aws_role is not None)
+        return f"arn:aws:iam::{self.aws_account_id}:role/{self.aws_role}"
+
     def dumps(self):
         return json.dumps({"name": self.name,
                            "jumpcloud_url": self.jumpcloud_url,
                            "aws_account_id": self.aws_account_id,
                            "aws_account_alias": self.aws_account_alias,
                            "aws_role": self.aws_role})
-
-    @property
-    def role_arn(self):
-        assert(self.aws_account_id is not None)
-        assert(self.aws_role is not None)
-        return f"arn:aws:iam::{self.aws_account_id}:role/{self.aws_role}"
 
     @classmethod
     def loads(cls, json_string):

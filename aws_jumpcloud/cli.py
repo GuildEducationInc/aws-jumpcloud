@@ -1,8 +1,5 @@
 from argparse import ArgumentParser
-from datetime import datetime
 import getpass
-from json import JSONDecodeError
-import os
 import sys
 import subprocess
 from subprocess import PIPE
@@ -40,7 +37,9 @@ def _build_parser():
     parser_remove = subparsers.add_parser("remove", help="Removes a profile and any temporary IAM sessions")
     parser_remove_mx = parser_remove.add_mutually_exclusive_group(required=True)
     parser_remove_mx.add_argument("profile", help="Name of the profile", nargs="?")
-    parser_remove_mx.add_argument("--all", action="store_true", help="Revokes all temporary IAM sessions and deletes stored JumpCloud authentication information.")
+    parser_remove_mx.add_argument(
+        "--all", action="store_true",
+        help="Revokes all temporary IAM sessions and deletes stored JumpCloud authentication information.")
     parser_remove.set_defaults(func=_remove)
 
     parser_exec = subparsers.add_parser(
@@ -49,7 +48,8 @@ def _build_parser():
     parser_exec.add_argument("command", nargs="+")
     parser_exec.set_defaults(func=_exec)
 
-    parser_rotate = subparsers.add_parser("rotate", help="Rotates temporary IAM session for an existing profile")
+    parser_rotate = subparsers.add_parser(
+        "rotate", help="Rotates temporary IAM session for an existing profile")
     parser_rotate.add_argument("profile", help="Name of the profile")
     parser_rotate.set_defaults(func=_rotate_session)
 
@@ -195,7 +195,7 @@ def _login(keyring, profile):
         print(f"\nError: {e.message}")
         if isinstance(e, JumpCloudAuthFailure):
             keyring.delete_jumpcloud_login()
-            print("- You will be prompted for your username and password the next time you run exec or rotate.")
+            print("- You will be prompted for your username and password the next time you try.")
         elif isinstance(e, JumpCloudServerError):
             error_msg = e.jumpcloud_error_message or e.response.text
             print(f"- JumpCloud error message: {error_msg}")
