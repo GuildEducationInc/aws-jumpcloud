@@ -23,22 +23,20 @@ class Keyring(object):
 
     # Public methods for working with JumpCloud login credentials
 
-    @property
-    def jumpcloud_email(self):
+    def get_jumpcloud_email(self):
         self._load()
         return self._jumpcloud_email
 
-    @jumpcloud_email.setter(self, value):
+    def store_jumpcloud_email(self, value):
         self._load()
         self._jumpcloud_email = value
         self._save()
 
-    @property
-    def jumpcloud_password(self):
+    def get_jumpcloud_password(self):
         self._load()
         return self._jumpcloud_password
 
-    @jumpcloud_password.setter(self, value):
+    def store_jumpcloud_password(self, value):
         self._load()
         self._jumpcloud_password = value
         self._save()
