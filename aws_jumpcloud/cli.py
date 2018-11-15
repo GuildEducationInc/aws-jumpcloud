@@ -27,33 +27,54 @@ def _build_parser():
     parser = ArgumentParser(description=DESCRIPTION)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    parser_help = subparsers.add_parser("help", help="Show this help message and exit")
+    parser_help.set_defaults(func=_help)
+
+    parser_info = subparsers.add_parser("info", help="Display info about your JumpCloud account")
+    parser_info.set_defaults(func=_get_info)
+
     parser_list = subparsers.add_parser("list", help="List profiles and their sessions")
     parser_list.set_defaults(func=_list_profiles)
 
-    parser_add = subparsers.add_parser("add", help="Adds a new profile")
-    parser_add.add_argument("profile", help="Name of the profile")
+    parser_add = subparsers.add_parser("add", help="Add a new profile")
+    parser_add.add_argument("profile", help="name of the profile")
     parser_add.set_defaults(func=_add_profile)
 
-    parser_remove = subparsers.add_parser("remove", help="Removes a profile and any temporary IAM sessions")
+    parser_remove = subparsers.add_parser("remove", help="Remove a profile and any temporary IAM sessions")
     parser_remove_mx = parser_remove.add_mutually_exclusive_group(required=True)
-    parser_remove_mx.add_argument("profile", help="Name of the profile", nargs="?")
+    parser_remove_mx.add_argument("profile", help="name of the profile", nargs="?")
     parser_remove_mx.add_argument(
         "--all", action="store_true",
-        help="Revokes all temporary IAM sessions and deletes stored JumpCloud authentication information.")
-    parser_remove.set_defaults(func=_remove)
+        help="revoke all temporary IAM sessions and deletes stored JumpCloud authentication information.")
+    parser_remove.set_defaults(func=_remove_profile)
 
     parser_exec = subparsers.add_parser(
         "exec", help="Executes a command with AWS credentials in the environment")
-    parser_exec.add_argument("profile", help="Name of the profile")
+    parser_exec.add_argument("profile", help="name of the profile")
     parser_exec.add_argument("command", nargs="+")
-    parser_exec.set_defaults(func=_exec)
+    parser_exec.set_defaults(func=_exec_command)
 
     parser_rotate = subparsers.add_parser(
         "rotate", help="Rotates temporary IAM session for an existing profile")
-    parser_rotate.add_argument("profile", help="Name of the profile")
+    parser_rotate.add_argument("profile", help="name of the profile")
     parser_rotate.set_defaults(func=_rotate_session)
 
     return parser
+
+
+def _help(args):
+    _build_parser().print_help()
+
+
+def _get_info(args):
+    keyring = Keyring()
+    print("")
+    email = keyring.get_jumpcloud_email()
+    password = keyring.get_jumpcloud_password()
+    ts = keyring.get_jumpcloud_timestamp()
+    print(f"JumpCloud email: {email or '<not stored>'}")
+    print(f"JumpCloud password: {'******** (hidden)' if password else '<not stored>'}")
+    print(f"Last JumpCloud authentication: {ts.astimezone().strftime('%c %Z') if ts else '<never>'}")
 
 
 def _list_profiles(args):
@@ -65,7 +86,7 @@ def _list_profiles(args):
         sys.exit(0)
     sessions = keyring.get_all_sessions()
     output = []
-    for profile in profiles.values():
+    for profile in sorted(profiles.values(), key=lambda p: p.name):
         aws_account_desc = profile.aws_account_alias or profile.aws_account_id or "<unknown>"
         aws_role = profile.aws_role or "<unknown>"
         if profile.name in sessions:
@@ -107,7 +128,7 @@ def _add_profile(args):
     print(f"Profile {args.profile} added.")
 
 
-def _remove(args):
+def _remove_profile(args):
     keyring = Keyring()
 
     if args.all:
@@ -127,7 +148,7 @@ def _remove(args):
         print(f"Profile {args.profile} not found, nothing to do.")
 
 
-def _exec(args):
+def _exec_command(args):
     keyring = Keyring()
     profile = keyring.get_profile(args.profile)
     if not profile:

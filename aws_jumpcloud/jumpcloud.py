@@ -1,8 +1,11 @@
 import base64
+from datetime import datetime, timezone
 from json import JSONDecodeError
 
 from bs4 import BeautifulSoup  # pylint: disable=E0401
 from requests import Session as HTTPSession
+
+from aws_jumpcloud.keyring import Keyring
 
 
 class JumpCloudSession(object):
@@ -35,6 +38,7 @@ class JumpCloudSession(object):
                                    timeout=JumpCloudSession.HTTP_TIMEOUT)
         if auth_resp.status_code == 200:
             self.logged_in = True
+            Keyring().store_jumpcloud_timestamp(datetime.now(tz=timezone.utc))
         elif otp is None and auth_resp.status_code == 302 and "error=4014" in auth_resp.headers['Location']:
             raise JumpCloudMFARequired(auth_resp)
         elif auth_resp.status_code == 401:

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import json
 
 import keyring
@@ -12,6 +13,7 @@ class Keyring(object):
         self._keyring_username = username
         self._jumpcloud_email = None
         self._jumpcloud_password = None
+        self._jumpcloud_timestamp = None
         self._profiles = None
         self._aws_sessions = None
 
@@ -39,6 +41,15 @@ class Keyring(object):
     def store_jumpcloud_password(self, value):
         self._load()
         self._jumpcloud_password = value
+        self._save()
+
+    def get_jumpcloud_timestamp(self):
+        self._load()
+        return self._jumpcloud_timestamp
+
+    def store_jumpcloud_timestamp(self, value):
+        self._load()
+        self._jumpcloud_timestamp = value
         self._save()
 
     # Public methods for working with AWS login profiles
@@ -107,6 +118,8 @@ class Keyring(object):
             keyring_data = json.loads(json_data)
         self._jumpcloud_email = keyring_data.get("jumpcloud_email") or None
         self._jumpcloud_password = keyring_data.get("jumpcloud_password") or None
+        if keyring_data.get("jumpcloud_timestamp"):
+            self._jumpcloud_timestamp = datetime.fromtimestamp(keyring_data.get("jumpcloud_timestamp"), tz=timezone.utc)
 
         self._profiles = {}
         for profile_str in keyring_data.get("profiles", []):
@@ -131,6 +144,7 @@ class Keyring(object):
         json_data = json.dumps({
             "jumpcloud_email": self._jumpcloud_email,
             "jumpcloud_password": self._jumpcloud_password,
+            "jumpcloud_timestamp": self._jumpcloud_timestamp.timestamp() if self._jumpcloud_timestamp else None,
             "profiles": [p.dumps() for p in self._profiles.values()],
             "aws_sessions": dict([(k, v.dumps()) for (k, v) in self._aws_sessions.items()])
         })
