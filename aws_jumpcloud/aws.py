@@ -10,12 +10,12 @@ import boto3
 ROLE_ARN_REGEXP = re.compile(r"^arn:aws:iam::([0-9]{12}):role/([\w+=,.@-]+)$")
 ParseResult = namedtuple("ArnParts", ["aws_account_id", "aws_role"])
 
-# The default duration for an STS session is 15 minutes. This must be within
+# Our default duration for an STS session is 60 minutes. This must be within
 # the role's MaxSessionDuration, but we can't validate that in advance of
-# attempting to call AssumeRole, so we'll leave it at 15 minutes. The actual
+# attempting to call AssumeRole, so we'll try for 60 minutes. The actual
 # duration for a session will be lesser of this or the SAML assertion's
 # SessionDuration.
-SESSION_DURATION = timedelta(minutes=15)
+SESSION_DURATION = timedelta(minutes=60)
 
 
 class AWSSession(object):
