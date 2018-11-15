@@ -229,11 +229,12 @@ def _login(keyring, profile):
     print("Attempting SSO authentication to Amazon Web Services...")
     saml_assertion = session.get_aws_saml_assertion(profile)
     roles = get_assertion_roles(saml_assertion)
+
+    # Warning: It's a valid JumpCloud configuration to present more than one
+    # role in the assertion, but we don't use that feature right now. We
+    # should handle that situation properly at some point.
     assert(len(roles) == 1)
     role = roles[0]
-
-    # TODO it's a valid JumpCloud configuration to present more than one role
-    # in the assertion; we should handle that properly at some point.
 
     # Update the AWS account ID and role name if they've changed
     r = parse_arn(role.role_arn)

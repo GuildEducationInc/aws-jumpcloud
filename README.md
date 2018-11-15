@@ -138,4 +138,4 @@ credentials have been removed from your OS keychain.
 
 Copyright &copy; 2018, Guild Education, Inc. All rights reserved.
 
-TODO: If we can open-source this, include contribution instructions and a license.
+11/15/2018: Waiting for approval to release this as open-source. If we do, include contribution instructions and a license here.
