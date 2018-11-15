@@ -2,7 +2,8 @@
 
 Allows you to authenticate with AWS using your GitHub credentials. Based on ideas from [aws-vault](https://github.com/99designs/aws-vault), [aws-okta](https://github.com/segmentio/aws-okta/), and [jumpcloud_aws](https://github.com/synaptic-cl/jumpcloud_aws).
 
-Features:
+### Features
+
 * Uses your JumpCloud account to authenticate to Amazon Web Services, via SAML single sign-on (SSO), and retrieves a set of temporary AWS security credentials.
 * Uses the native OS keychain to store JumpCloud credentials and AWS temporary IAM credentials. Built atop [Keyring](https://pypi.org/project/keyring/) for Python, with support for macOS, Windows, and Linux.
 * Supports multiple AWS profiles, to handle multiple AWS integrations in your JumpCloud account.
@@ -41,7 +42,7 @@ sudo ln -s /usr/local/aws-jumpcloud/bin/aws-jumpcloud \
 
 Context-sensitive help is available for every command in `aws-jumpcloud`.
 
-```bash
+```
 # Show general help about aws-jumpcloud
 $ aws-jumpcloud --help
 
@@ -53,7 +54,7 @@ $ aws-jumpcloud exec --help
 
 Typically you'll start by adding a profile for your primary AWS integration. This will prompt you for the JumpCloud URL, which you can grab from the [JumpCloud Console](https://console.jumpcloud.com) in your browser. Right-click on any AWS integration icon and choose "Copy Link Address."
 
-```bash
+```
 $ aws-jumpcloud add duff
 Enter the JumpCloud SSO URL for duff: https://sso.jumpcloud.com/saml2/aws
 Profile duff added.
@@ -63,7 +64,7 @@ Profile duff added.
 
 You can view all profiles registered in your `aws-jumpcloud` keychain:
 
-```bash
+```
 $ aws-jumpcloud list
 
 Profile           AWS Account       AWS Role     IAM session expires    
@@ -77,7 +78,7 @@ Once you've created a profile, you can use it to run a command, like `aws s3 ls`
 
 The first time you login to JumpCloud, you will be prompted for your JumpCloud email and password, along with an MFA token if necessary. `aws-jumpcloud` will store your email and password in your OS keychain for future logins, but you'll be prompted for the MFA token every time.
 
-```bash
+```
 $ aws-jumpcloud exec duff -- aws s3 ls
 Enter your JumpCloud email address: duffman@duff-beer.com
 Enter your JumpCloud password: 
@@ -92,7 +93,7 @@ Attempting SSO authentication to Amazon Web Services...
 
 Behind the scenes, `aws-jumpcloud` has used SAML single sign-on to authenticate with Amazon Web Services and request a set of temporary security credentials. The temporary credentials are cached in your operating system's keychain for an hour, so you can continue to run AWS commands without needing to authenticate again.
 
-```bash
+```
 $ aws-jumpcloud exec duff -- aws s3 ls s3://duff-logs-us-east-1/
 2018-11-14 18:19:50        557 2018-11-15-01-19-49-793C97002B9C598F
 2018-11-14 18:19:57        461 2018-11-15-01-19-56-800F45BFB3E1F93B
@@ -104,7 +105,7 @@ $ aws-jumpcloud exec duff -- aws s3 ls s3://duff-logs-us-east-1/
 
 After a profile's temporary IAM credentials expire, `aws-jumpcloud` will automatically delete the credentials from its keychain. New temporary credentials will automatically be requested the next time you attempt to use that profile. However, you can also rotate the credentials at any time and request new credentials immediately.
 
-```bash
+```
 $ aws-jumpcloud rotate duff
 Temporary IAM session for duff removed.
 Using JumpCloud login details from your OS keychain.
@@ -118,14 +119,14 @@ AWS temporary session rotated; new session valid until Thu Nov 15 20:49:38 2018 
 
 You can remove a profile if you no longer need it:
 
-```bash
+```
 $ aws-jumpcloud remove duff
 Profile duff and temporary IAM session removed.
 ```
 
 And you can clear `aws-jumpcloud`'s entire keychain if necessary:
 
-```bash
+```
 $ aws-jumpcloud remove --all
 
 All configuration profiles, temporary IAM sessions, and JumpCloud login
