@@ -10,6 +10,7 @@ from aws_jumpcloud.jumpcloud import JumpCloudServerError, JumpCloudUnexpectedRes
 from aws_jumpcloud.keyring import Keyring
 from aws_jumpcloud.profile import Profile
 from aws_jumpcloud.saml import get_assertion_roles
+from aws_jumpcloud.version import __VERSION__
 
 DESCRIPTION = "A vault for securely storing and accessing AWS credentials in development environments."
 
@@ -25,22 +26,24 @@ def main():
 
 def _build_parser():
     parser = ArgumentParser(description=DESCRIPTION)
+    parser.add_argument("--version", action='version', version="%(prog)s ("+__VERSION__+")")
+
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    parser_help = subparsers.add_parser("help", help="Show this help message and exit")
-    parser_help.set_defaults(func=_help)
+    parser_help = subparsers.add_parser("help", help="show this help message and exit")
+    parser_help.set_defaults(func=_print_help)
 
-    parser_info = subparsers.add_parser("info", help="Display info about your JumpCloud account")
+    parser_info = subparsers.add_parser("info", help="display info about your JumpCloud account")
     parser_info.set_defaults(func=_get_info)
 
-    parser_list = subparsers.add_parser("list", help="List profiles and their sessions")
+    parser_list = subparsers.add_parser("list", help="list profiles and their sessions")
     parser_list.set_defaults(func=_list_profiles)
 
-    parser_add = subparsers.add_parser("add", help="Add a new profile")
+    parser_add = subparsers.add_parser("add", help="add a new profile")
     parser_add.add_argument("profile", help="name of the profile")
     parser_add.set_defaults(func=_add_profile)
 
-    parser_remove = subparsers.add_parser("remove", help="Remove a profile and any temporary IAM sessions")
+    parser_remove = subparsers.add_parser("remove", help="remove a profile and any temporary IAM sessions")
     parser_remove_mx = parser_remove.add_mutually_exclusive_group(required=True)
     parser_remove_mx.add_argument("profile", help="name of the profile", nargs="?")
     parser_remove_mx.add_argument(
@@ -49,20 +52,20 @@ def _build_parser():
     parser_remove.set_defaults(func=_remove_profile)
 
     parser_exec = subparsers.add_parser(
-        "exec", help="Executes a command with AWS credentials in the environment")
+        "exec", help="executes a command with AWS credentials in the environment")
     parser_exec.add_argument("profile", help="name of the profile")
     parser_exec.add_argument("command", nargs="+")
     parser_exec.set_defaults(func=_exec_command)
 
     parser_rotate = subparsers.add_parser(
-        "rotate", help="Rotates temporary IAM session for an existing profile")
+        "rotate", help="rotates temporary IAM session for an existing profile")
     parser_rotate.add_argument("profile", help="name of the profile")
     parser_rotate.set_defaults(func=_rotate_session)
 
     return parser
 
 
-def _help(args):
+def _print_help(args):
     _build_parser().print_help()
 
 
