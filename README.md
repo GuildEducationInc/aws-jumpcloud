@@ -21,20 +21,14 @@ Allows you to authenticate with AWS using your GitHub credentials. Based on idea
 
 Prerequisite: Python 3.6 or newer.
 
-To install globally:
+To install direct from GitHub:
 ```bash
-python3 setup.py install
+$ pip3 install https://github.com/GuildEducationInc/aws-jumpcloud/archive/v1.0.0.tar.gz
 ```
 
-If you have `virtualenv` installed, you can install this into its own private environment and create a symlink in `/usr/local/bin`:
+If you've downloaded the release from GitHub, just point `pip3` at the archive:
 ```bash
-sudo mkdir /usr/local/aws-jumpcloud
-sudo chown $USER:$USER /usr/local/aws-jumpcloud
-virtualenv --python=/usr/local/bin/python3 /usr/local/aws-jumpcloud
-/usr/local/aws-jumpcloud/bin/python3 setup.py install
-
-sudo ln -s /usr/local/aws-jumpcloud/bin/aws-jumpcloud \
-    /usr/local/bin/aws-jumpcloud
+$ pip3 install v1.0.0.tar.gz
 ```
 
 
