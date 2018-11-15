@@ -134,6 +134,14 @@ credentials have been removed from your OS keychain.
 ```
 
 
+## Developing
+
+```
+$ pip install -r test-requirements.txt
+$ pycodestyle *.py aws_jumpcloud/
+$ pylint -E *.py aws_jumpcloud/
+```
+
 ## Copyright
 
 Copyright &copy; 2018, Guild Education, Inc. All rights reserved.

@@ -118,8 +118,9 @@ class Keyring(object):
             keyring_data = json.loads(json_data)
         self._jumpcloud_email = keyring_data.get("jumpcloud_email") or None
         self._jumpcloud_password = keyring_data.get("jumpcloud_password") or None
-        if keyring_data.get("jumpcloud_timestamp"):
-            self._jumpcloud_timestamp = datetime.fromtimestamp(keyring_data.get("jumpcloud_timestamp"), tz=timezone.utc)
+        timestamp = keyring_data.get("jumpcloud_timestamp")
+        if timestamp:
+            self._jumpcloud_timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
 
         self._profiles = {}
         for profile_str in keyring_data.get("profiles", []):
@@ -141,10 +142,14 @@ class Keyring(object):
 
     def _save(self):
         """Pushes data from this object into the OS keyring."""
+        if self._jumpcloud_timestamp:
+            timestamp = self._jumpcloud_timestamp.timestamp()
+        else:
+            timestamp = None
         json_data = json.dumps({
             "jumpcloud_email": self._jumpcloud_email,
             "jumpcloud_password": self._jumpcloud_password,
-            "jumpcloud_timestamp": self._jumpcloud_timestamp.timestamp() if self._jumpcloud_timestamp else None,
+            "jumpcloud_timestamp": timestamp,
             "profiles": [p.dumps() for p in self._profiles.values()],
             "aws_sessions": dict([(k, v.dumps()) for (k, v) in self._aws_sessions.items()])
         })
