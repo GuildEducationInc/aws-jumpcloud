@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import getpass
+import os
 import sys
 import subprocess
 from subprocess import PIPE
@@ -178,11 +179,11 @@ def _exec_command(args):
         sys.exit(result.returncode)
 
     # Run the command that the user wanted, with AWS credentials in the environment
-    env = {'AWS_ACCESS_KEY_ID': session.access_key_id,
-           'AWS_SECRET_ACCESS_KEY': session.secret_access_key,
-           'AWS_SECURITY_TOKEN': session.session_token,
-           'AWS_SESSION_TOKEN': session.session_token}
-    result = subprocess.run(args.command, env=env)
+    os.environ['AWS_ACCESS_KEY_ID'] = session.access_key_id
+    os.environ['AWS_SECRET_ACCESS_KEY'] = session.secret_access_key
+    os.environ['AWS_SECURITY_TOKEN'] = session.session_token
+    os.environ['AWS_SESSION_TOKEN'] = session.session_token
+    result = subprocess.run(args.command)
     sys.exit(result.returncode)
 
 
