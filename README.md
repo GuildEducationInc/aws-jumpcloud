@@ -23,12 +23,12 @@ Prerequisite: Python 3.6 or newer.
 
 To install direct from GitHub, make sure you have a GitHub stanza in your `~/.netrc` so you can clone private repositories, then run:
 ```bash
-$ pip3 install https://github.com/GuildEducationInc/aws-jumpcloud/archive/v1.0.0.tar.gz
+$ pip3 install https://github.com/GuildEducationInc/aws-jumpcloud/archive/v1.0.1.tar.gz
 ```
 
 Alternatively, downloaded the [latest release](https://github.com/GuildEducationInc/aws-jumpcloud/releases/latest) and just point `pip3` at the archive:
 ```bash
-$ pip3 install v1.0.0.tar.gz
+$ pip3 install v1.0.1.tar.gz
 ```
 
 
