@@ -7,7 +7,7 @@ from subprocess import PIPE
 
 from aws_jumpcloud.aws import assume_role_with_saml, get_account_alias, parse_arn
 from aws_jumpcloud.jumpcloud import JumpCloudSession, JumpCloudError, JumpCloudAuthFailure
-from aws_jumpcloud.jumpcloud import JumpCloudServerError, JumpCloudUnexpectedResponse
+from aws_jumpcloud.jumpcloud import JumpCloudMFARequired, JumpCloudServerError, JumpCloudUnexpectedResponse
 from aws_jumpcloud.keyring import Keyring
 from aws_jumpcloud.profile import Profile
 from aws_jumpcloud.saml import get_assertion_roles
@@ -119,13 +119,15 @@ def _print_columns(headers, rows):
 def _add_profile(args):
     keyring = Keyring()
     if keyring.get_profile(args.profile):
-        print(f"Error: Profile {args.profile} already exists.")
-        print("If you want to change the profile defaults, remove the profile and add it again.")
+        sys.stderr.write(f"Error: Profile {args.profile} already exists.\n")
+        sys.stderr.write("If you want to change the profile defaults, remove the profile\n")
+        sys.stderr.write("and add it again.\n")
         sys.exit(1)
 
     jumpcloud_url = input(f"Enter the JumpCloud SSO URL for {args.profile}: ").strip()
     if not jumpcloud_url.startswith("https://sso.jumpcloud.com/saml2/"):
-        print("Error: Not a valid JumpCloud SSO URL, must start with https://sso.jumpcloud.com/saml2/.")
+        sys.stderr.write("Error: That's not a valid JumpCloud SSO URL. SSO URLs must\n")
+        sys.stderr.write("start with https://sso.jumpcloud.com/saml2/.\n")
         sys.exit(1)
     profile = Profile(args.profile, jumpcloud_url)
     keyring.store_profile(profile)
@@ -156,13 +158,12 @@ def _exec_command(args):
     keyring = Keyring()
     profile = keyring.get_profile(args.profile)
     if not profile:
-        print(f"Error: Profile {args.profile} not found; you must add it first.")
+        sys.stderr.write(f"Error: Profile {args.profile} not found; you must add it first.\n")
         sys.exit(1)
     session = keyring.get_session(args.profile)
     if not session:
         _login(keyring, profile)
         session = keyring.get_session(args.profile)
-        print("")
 
     # Find the full path to the program that the user wants to run, otherwise
     # subprocess.run() won't be able to find it. (I'm not sure exactly why this
@@ -172,7 +173,7 @@ def _exec_command(args):
     if result.returncode == 0 and len(result.stdout.strip()) > 0:
         args.command[0] = result.stdout.strip()
     elif result.returncode == 1:
-        print(f"{args.command[0]}: command not found")
+        sys.stderr.write(f"{args.command[0]}: command not found\n")
         sys.exit(127)
     else:
         sys.stdout.write(result.stdout)
@@ -191,7 +192,7 @@ def _rotate_session(args):
     keyring = Keyring()
     profile = keyring.get_profile(args.profile)
     if not profile:
-        print(f"Error: Profile {args.profile} not found.")
+        sys.stderr.write(f"Error: Profile {args.profile} not found.\n")
         sys.exit(1)
 
     keyring.delete_session(args.profile)
@@ -199,38 +200,48 @@ def _rotate_session(args):
 
     _login(keyring, profile)
     session = keyring.get_session(args.profile)
-    print(f"AWS temporary session rotated; new session valid until {session.expires_at.strftime('%c %Z')}.")
+    expires_at = session.expires_at.strftime('%c %Z')
+    print(f"AWS temporary session rotated; new session valid until {expires_at}.")
 
 
 def _login(keyring, profile):
     email = keyring.get_jumpcloud_email()
     password = keyring.get_jumpcloud_password()
     if email and password:
-        print("Using JumpCloud login details from your OS keychain.")
-    else:
+        sys.stderr.write("Using JumpCloud login details from your OS keychain.\n")
+    elif sys.stdout.isatty():
         email = input("Enter your JumpCloud email address: ").strip()
         password = getpass.getpass("Enter your JumpCloud password: ").strip()
         keyring.store_jumpcloud_email(email)
         keyring.store_jumpcloud_password(password)
-        print("JumpCloud login details saved in your OS keychain.")
+        sys.stderr.write("JumpCloud login details saved in your OS keychain.\n")
+    else:
+        sys.stderr.write("Error: JumpCloud login details not found in your OS keychain.\n")
+        sys.stderr.write(f"Run \"aws-jumpcloud rotate {profile.name}\" interactively to store your\n")
+        sys.stderr.write(f"credentials in the keychain, then try again.\n")
+        sys.exit(1)
 
     session = JumpCloudSession(email, password)
     try:
         session.login()
     except JumpCloudError as e:
-        print(f"\nError: {e.message}")
+        sys.stderr.write(f"\nError: {e.message}\n")
         if isinstance(e, JumpCloudAuthFailure):
             keyring.store_jumpcloud_email(None)
             keyring.store_jumpcloud_password(None)
-            print("- You will be prompted for your username and password the next time you try.")
+            sys.stderr.write("- You will be prompted for your username and password ")
+            sys.stderr.write("the next time you try.\n")
+        elif isinstance(e, JumpCloudMFARequired):
+            sys.stderr.write(f"Run \"aws-jumpcloud rotate {profile.name}\" interactively to refresh\n")
+            sys.stderr.write("the temporary credentials in your OS keychain, then try again.\n")
         elif isinstance(e, JumpCloudServerError):
             error_msg = e.jumpcloud_error_message or e.response.text
-            print(f"- JumpCloud error message: {error_msg}")
+            sys.stderr.write(f"- JumpCloud error message: {error_msg}\n")
         elif isinstance(e, JumpCloudUnexpectedResponse):
-            print(f"- JumpCloud response body: {e.response.text}")
+            sys.stderr.write(f"- JumpCloud response body: {e.response.text}\n")
         sys.exit(1)
 
-    print("Attempting SSO authentication to Amazon Web Services...")
+    sys.stderr.write("Attempting SSO authentication to Amazon Web Services...\n")
     saml_assertion = session.get_aws_saml_assertion(profile)
     roles = get_assertion_roles(saml_assertion)
 
@@ -258,5 +269,5 @@ def _login(keyring, profile):
         profile.aws_account_alias = alias
         keyring.store_profile(profile)
 
-    print("")
+    sys.stderr.write("\n")
     return session

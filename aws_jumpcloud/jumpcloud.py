@@ -1,6 +1,7 @@
 import base64
 from datetime import datetime, timezone
 from json import JSONDecodeError
+import sys
 
 from bs4 import BeautifulSoup  # pylint: disable=E0401
 from requests import Session as HTTPSession
@@ -21,9 +22,12 @@ class JumpCloudSession(object):
     def login(self):
         try:
             self._authenticate()
-        except JumpCloudMFARequired:
-            otp = input("Enter your JumpCloud multi-factor auth code: ").strip()
-            self._authenticate(otp=otp)
+        except JumpCloudMFARequired as e:
+            if sys.stdout.isatty():
+                otp = input("Enter your JumpCloud multi-factor auth code: ").strip()
+                self._authenticate(otp=otp)
+            else:
+                raise e
 
     def _authenticate(self, otp=None):
         assert(not self.logged_in)
