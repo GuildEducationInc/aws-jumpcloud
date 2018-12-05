@@ -223,28 +223,27 @@ def _rotate_all_sessions(args):
     print("")
 
     for profile in profiles.values():
-        keyring.delete_session(profile.name)
-        print(f"Temporary IAM session for {profile.name} removed.")
-        _login(keyring, profile)
-        session = keyring.get_session(profile.name)
-        expires_at = session.expires_at.strftime('%c %Z')
-        print(f"AWS temporary session for {profile.name} rotated; new session valid until {expires_at}.\n")
+        _rotate_single_session(args, profile.name)
 
 
-def _rotate_single_session(args):
+def _rotate_single_session(args, profile_name=None):
+    if not profile_name:
+        profile_name = args.profile
+    assert(profile_name is not None)
+
     keyring = Keyring()
-    profile = keyring.get_profile(args.profile)
+    profile = keyring.get_profile(profile_name)
     if not profile:
-        sys.stderr.write(f"Error: Profile {args.profile} not found.\n")
+        sys.stderr.write(f"Error: Profile {profile_name} not found.\n")
         sys.exit(1)
 
     _establish_session()
 
-    keyring.delete_session(args.profile)
-    print(f"Temporary IAM session for {args.profile} removed.")
+    keyring.delete_session(profile_name)
+    print(f"Temporary IAM session for {profile_name} removed.")
 
     _login(keyring, profile)
-    session = keyring.get_session(args.profile)
+    session = keyring.get_session(profile_name)
     expires_at = session.expires_at.strftime('%c %Z')
     print(f"AWS temporary session rotated; new session valid until {expires_at}.\n")
 
