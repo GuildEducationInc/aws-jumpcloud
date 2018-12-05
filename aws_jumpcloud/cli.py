@@ -15,6 +15,8 @@ from aws_jumpcloud.version import __VERSION__
 
 DESCRIPTION = "A vault for securely storing and accessing AWS credentials in development environments."
 
+_session = None
+
 
 def main():
     parser = _build_parser()
@@ -59,8 +61,13 @@ def _build_parser():
     parser_exec.set_defaults(func=_exec_command)
 
     parser_rotate = subparsers.add_parser(
-        "rotate", help="rotates temporary IAM session for an existing profile")
-    parser_rotate.add_argument("profile", help="name of the profile")
+        "rotate",
+        help="rotates the IAM session (generates new temporary credentials) for an existing profile")
+    parser_rotate_mx = parser_rotate.add_mutually_exclusive_group(required=True)
+    parser_rotate_mx.add_argument("profile", help="name of the profile", nargs="?")
+    parser_rotate_mx.add_argument(
+        "--all", action="store_true",
+        help="generate new temporary IAM credentials for all existing profiles")
     parser_rotate.set_defaults(func=_rotate_session)
 
     return parser
@@ -135,23 +142,32 @@ def _add_profile(args):
 
 
 def _remove_profile(args):
-    keyring = Keyring()
-
     if args.all:
-        keyring.delete_all_data()
-        print("")
-        print("All configuration profiles, temporary IAM sessions, and JumpCloud login")
-        print("credentials have been removed from your OS keychain.")
-    elif keyring.get_profile(args.profile):
-        has_session = not not keyring.get_session(args.profile)
-        keyring.delete_session(args.profile)
-        keyring.delete_profile(args.profile)
-        if has_session:
-            print(f"Profile {args.profile} and temporary IAM session removed.")
-        else:
-            print(f"Profile {args.profile} removed.")
+        _remove_all_profiles(args)
     else:
+        _remove_single_profile(args)
+
+
+def _remove_all_profiles(args):
+    keyring = Keyring()
+    keyring.delete_all_data()
+    print("")
+    print("All configuration profiles, temporary IAM sessions, and JumpCloud login")
+    print("credentials have been removed from your OS keychain.")
+
+
+def _remove_single_profile(args):
+    keyring = Keyring()
+    if not keyring.get_profile(args.profile):
         print(f"Profile {args.profile} not found, nothing to do.")
+        return
+    has_session = not not keyring.get_session(args.profile)
+    keyring.delete_session(args.profile)
+    keyring.delete_profile(args.profile)
+    if has_session:
+        print(f"Profile {args.profile} and temporary IAM session removed.")
+    else:
+        print(f"Profile {args.profile} removed.")
 
 
 def _exec_command(args):
@@ -189,22 +205,55 @@ def _exec_command(args):
 
 
 def _rotate_session(args):
+    if args.all:
+        _rotate_all_sessions(args)
+    else:
+        _rotate_single_session(args)
+
+
+def _rotate_all_sessions(args):
     keyring = Keyring()
-    profile = keyring.get_profile(args.profile)
+    profiles = keyring.get_all_profiles()
+    if len(profiles) == 0:
+        print("")
+        print("No profiles found. Use \"aws-jumpcloud add <profile>\" to store a new profile.")
+        sys.exit(0)
+
+    _establish_session()
+    print("")
+
+    for profile in profiles.values():
+        _rotate_single_session(args, profile.name)
+
+
+def _rotate_single_session(args, profile_name=None):
+    if not profile_name:
+        profile_name = args.profile
+    assert(profile_name is not None)
+
+    keyring = Keyring()
+    profile = keyring.get_profile(profile_name)
     if not profile:
-        sys.stderr.write(f"Error: Profile {args.profile} not found.\n")
+        sys.stderr.write(f"Error: Profile {profile_name} not found.\n")
         sys.exit(1)
 
-    keyring.delete_session(args.profile)
-    print(f"Temporary IAM session for {args.profile} removed.")
+    _establish_session()
+
+    keyring.delete_session(profile_name)
+    print(f"Temporary IAM session for {profile_name} removed.")
 
     _login(keyring, profile)
-    session = keyring.get_session(args.profile)
+    session = keyring.get_session(profile_name)
     expires_at = session.expires_at.strftime('%c %Z')
-    print(f"AWS temporary session rotated; new session valid until {expires_at}.")
+    print(f"AWS temporary session rotated; new session valid until {expires_at}.\n")
 
 
-def _login(keyring, profile):
+def _establish_session():
+    global _session
+    if _session:
+        return _session
+
+    keyring = Keyring()
     email = keyring.get_jumpcloud_email()
     password = keyring.get_jumpcloud_password()
     if email and password:
@@ -217,7 +266,7 @@ def _login(keyring, profile):
         sys.stderr.write("JumpCloud login details saved in your OS keychain.\n")
     else:
         sys.stderr.write("Error: JumpCloud login details not found in your OS keychain.\n")
-        sys.stderr.write(f"Run \"aws-jumpcloud rotate {profile.name}\" interactively to store your\n")
+        sys.stderr.write(f"Run \"{_get_command_line()}\" interactively to store your\n")
         sys.stderr.write(f"credentials in the keychain, then try again.\n")
         sys.exit(1)
 
@@ -232,7 +281,7 @@ def _login(keyring, profile):
             sys.stderr.write("- You will be prompted for your username and password ")
             sys.stderr.write("the next time you try.\n")
         elif isinstance(e, JumpCloudMFARequired):
-            sys.stderr.write(f"Run \"aws-jumpcloud rotate {profile.name}\" interactively to refresh\n")
+            sys.stderr.write(f"Run \"{_get_command_line()}\" interactively to refresh\n")
             sys.stderr.write("the temporary credentials in your OS keychain, then try again.\n")
         elif isinstance(e, JumpCloudServerError):
             error_msg = e.jumpcloud_error_message or e.response.text
@@ -241,6 +290,12 @@ def _login(keyring, profile):
             sys.stderr.write(f"- JumpCloud response body: {e.response.text}\n")
         sys.exit(1)
 
+    _session = session
+    return _session
+
+
+def _login(keyring, profile):
+    session = _establish_session()
     sys.stderr.write("Attempting SSO authentication to Amazon Web Services...\n")
     saml_assertion = session.get_aws_saml_assertion(profile)
     roles = get_assertion_roles(saml_assertion)
@@ -271,3 +326,13 @@ def _login(keyring, profile):
 
     sys.stderr.write("\n")
     return session
+
+
+def _get_command_line():
+    # Returns the command line that the user supplied to this program, for use
+    # in error messages and help text. The OS replaces sys.argv[0] with the full
+    # path to the program, which isn't usually what we want to show in help
+    # text, so this function replaces it with a cleaner program name.
+    command = sys.argv
+    command[0] = _build_parser().prog
+    return subprocess.list2cmdline(command)
