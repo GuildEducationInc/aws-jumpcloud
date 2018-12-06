@@ -219,7 +219,7 @@ def _rotate_all_sessions(args):
         print("No profiles found. Use \"aws-jumpcloud add <profile>\" to store a new profile.")
         sys.exit(0)
 
-    _establish_session()
+    _get_jumpcloud_session('--all')
     print("")
 
     for profile in profiles.values():
@@ -237,7 +237,7 @@ def _rotate_single_session(args, profile_name=None):
         sys.stderr.write(f"Error: Profile {profile_name} not found.\n")
         sys.exit(1)
 
-    _establish_session()
+    _get_jumpcloud_session(profile_name)
 
     keyring.delete_session(profile_name)
     print(f"Temporary IAM session for {profile_name} removed.")
@@ -248,7 +248,10 @@ def _rotate_single_session(args, profile_name=None):
     print(f"AWS temporary session rotated; new session valid until {expires_at}.\n")
 
 
-def _establish_session():
+def _get_jumpcloud_session(profile_name):
+    # This function returns a JumpCloudSession with the user logged in. If a
+    # session is already exists in the current process, it uses that;
+    # otherwise it creates a new one.
     global _session
     if _session:
         return _session
@@ -265,9 +268,10 @@ def _establish_session():
         keyring.store_jumpcloud_password(password)
         sys.stderr.write("JumpCloud login details saved in your OS keychain.\n")
     else:
-        sys.stderr.write("Error: JumpCloud login details not found in your OS keychain.\n")
-        sys.stderr.write(f"Run \"{_get_command_line()}\" interactively to store your\n")
-        sys.stderr.write(f"credentials in the keychain, then try again.\n")
+        sys.stderr.write(
+            "Error: JumpCloud login details not found in your OS keychain.\n"
+            f"Run \"{_get_program_name()} rotate {profile_name}\" interactively to\n"
+            "store your credentials in the keychain, then try again.\n")
         sys.exit(1)
 
     session = JumpCloudSession(email, password)
@@ -278,11 +282,13 @@ def _establish_session():
         if isinstance(e, JumpCloudAuthFailure):
             keyring.store_jumpcloud_email(None)
             keyring.store_jumpcloud_password(None)
-            sys.stderr.write("- You will be prompted for your username and password ")
-            sys.stderr.write("the next time you try.\n")
+            sys.stderr.write(
+                "- You will be prompted for your username and password "
+                "the next time you try.\n")
         elif isinstance(e, JumpCloudMFARequired):
-            sys.stderr.write(f"Run \"{_get_command_line()}\" interactively to refresh\n")
-            sys.stderr.write("the temporary credentials in your OS keychain, then try again.\n")
+            sys.stderr.write(
+                f"Run \"{_get_program_name()} rotate {profile_name}\" interactively to\n"
+                "refresh the temporary credentials in your OS keychain, then try again.\n")
         elif isinstance(e, JumpCloudServerError):
             error_msg = e.jumpcloud_error_message or e.response.text
             sys.stderr.write(f"- JumpCloud error message: {error_msg}\n")
@@ -295,7 +301,7 @@ def _establish_session():
 
 
 def _login(keyring, profile):
-    session = _establish_session()
+    session = _get_jumpcloud_session(profile.name)
     sys.stderr.write("Attempting SSO authentication to Amazon Web Services...\n")
     saml_assertion = session.get_aws_saml_assertion(profile)
     roles = get_assertion_roles(saml_assertion)
@@ -328,11 +334,5 @@ def _login(keyring, profile):
     return session
 
 
-def _get_command_line():
-    # Returns the command line that the user supplied to this program, for use
-    # in error messages and help text. The OS replaces sys.argv[0] with the full
-    # path to the program, which isn't usually what we want to show in help
-    # text, so this function replaces it with a cleaner program name.
-    command = sys.argv
-    command[0] = _build_parser().prog
-    return subprocess.list2cmdline(command)
+def _get_program_name():
+    return _build_parser().prog
