@@ -6,16 +6,19 @@ import re
 
 import boto3
 
+from aws_jumpcloud.saml import get_assertion_duration
+
 # Regular expression to extract an account number and role name from an ARN.
 ROLE_ARN_REGEXP = re.compile(r"^arn:aws:iam::([0-9]{12}):role/([\w+=,.@-]+)$")
 ParseResult = namedtuple("ArnParts", ["aws_account_id", "aws_role"])
 
-# Our default duration for an STS session is 60 minutes. This must be within
-# the role's MaxSessionDuration, but we can't validate that in advance of
-# attempting to call AssumeRole, so we'll try for 60 minutes. The actual
-# duration for a session will be lesser of this or the SAML assertion's
-# SessionDuration.
-SESSION_DURATION = timedelta(minutes=60)
+# If the SAML assertion from JumpCloud doesn't include a SessionDuration
+# attribute, use a default duration of 60 minutes. Whether using a
+# SessionDuration attribute or a default, the duration requested in the
+# AssumeRole API call *must* be <= the role's MaxSessionDuration, or the API
+# call will fail. (Don't set your JumpCloud SessionDuration higher than your
+# AWS MaxSessionDuration!)
+DEFAULT_DURATION = 60 * 60  # in seconds
 
 
 class AWSSession(object):
@@ -47,12 +50,12 @@ class AWSSession(object):
 
 def assume_role_with_saml(saml_role, saml_assertion_xml):
     client = boto3.client('sts')
+    duration = get_assertion_duration(saml_assertion_xml) or DEFAULT_DURATION
     sts_resp = client.assume_role_with_saml(
         RoleArn=saml_role.role_arn,
         PrincipalArn=saml_role.principal_arn,
         SAMLAssertion=base64.b64encode(saml_assertion_xml).decode("ascii"),
-        DurationSeconds=int(SESSION_DURATION.total_seconds())
-    )
+        DurationSeconds=duration)
     assert(sts_resp['ResponseMetadata']['HTTPStatusCode'] == 200)
 
     return AWSSession(access_key_id=sts_resp['Credentials']['AccessKeyId'],
