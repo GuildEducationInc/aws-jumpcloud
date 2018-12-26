@@ -21,9 +21,9 @@ Allows you to authenticate with AWS using your JumpCloud credentials. Based on i
 
 Prerequisite: Python 3.6 or newer.
 
-To install, downloaded the [latest release](https://github.com/GuildEducationInc/aws-jumpcloud/releases/latest) and just point `pip3` at the archive:
+To install, just point `pip3` at the latest GitHub release:
 ```bash
-$ pip3 install v1.0.3.tar.gz
+$ pip3 install https://github.com/GuildEducationInc/aws-jumpcloud/archive/1.1.0.tar.gz
 ```
 
 
