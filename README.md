@@ -131,8 +131,10 @@ $ pycodestyle *.py aws_jumpcloud/
 $ pylint -E *.py aws_jumpcloud/
 ```
 
-## Copyright
+## Contributing
 
-Copyright &copy; 2018, Guild Education, Inc. All rights reserved.
+aws-jumpcloud is open-source and licensed under the [MIT License](LICENSE).
 
-11/15/2018: Waiting for approval to release this as open-source. If we do, include contribution instructions and a license here.
+Use the project's [GitHub Issues feature](https://github.com/GuildEducationInc/aws-jumpcloud/issues) to report bugs and make feature requests.
+
+Even better, if you're able to write code yourself to fix bugs or implement new features, [submit a pull request on GitHub](https://github.com/GuildEducationInc/aws-jumpcloud/pulls) which will help us move the software forward much faster.
