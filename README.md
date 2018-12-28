@@ -23,7 +23,7 @@ Prerequisite: Python 3.6 or newer.
 
 To install, just point `pip3` at the latest GitHub release:
 ```bash
-$ pip3 install https://github.com/GuildEducationInc/aws-jumpcloud/archive/1.1.0.tar.gz
+$ pip3 install https://github.com/GuildEducationInc/aws-jumpcloud/archive/1.1.1.tar.gz
 ```
 
 
