@@ -21,6 +21,10 @@ _session = None
 def main():
     parser = _build_parser()
     args = parser.parse_args()
+    if 'func' not in args:
+        parser.print_usage()
+        print("error: the following arguments are required: command")
+        sys.exit(2)
     try:
         args.func(args)
     except KeyboardInterrupt:
@@ -31,7 +35,7 @@ def _build_parser():
     parser = ArgumentParser(description=DESCRIPTION)
     parser.add_argument("--version", action='version', version="%(prog)s ("+__VERSION__+")")
 
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command")
 
     parser_help = subparsers.add_parser("help", help="show this help message and exit")
     parser_help.set_defaults(func=_print_help)
