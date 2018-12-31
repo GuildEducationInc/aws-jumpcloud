@@ -117,16 +117,31 @@ class Keyring(object):
         timestamp = keyring_data.get("jumpcloud_timestamp")
         if timestamp:
             self._jumpcloud_timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        else:
+            self._jumpcloud_timestamp = None
 
         self._profiles = {}
         for profile_str in keyring_data.get("profiles", []):
             p = Profile.loads(profile_str)
             self._profiles[p.name] = p
-        self._aws_sessions = {}
 
-        expired_sessions = 0
+        self._aws_sessions = {}
         for (profile, session_str) in keyring_data.get("aws_sessions", {}).items():
             session = AWSSession.loads(session_str)
+            self._aws_sessions[profile] = session
+
+        self._purge_expired_sessions()
+
+    def _load_raw_keyring_data(self):
+        json_data = keyring.get_password(self._keyring_service, self._keyring_username)
+        if json_data is None:
+            return {}
+        else:
+            return json.loads(json_data)
+
+    def _purge_expired_sessions(self):
+        expired_sessions = 0
+        for profile, session in self._aws_sessions.items():
             if session.expired():
                 # Don't save expired sessions in the dict, and note that we
                 # found expired sessions so that we can remove them from the OS
@@ -136,13 +151,6 @@ class Keyring(object):
                 self._aws_sessions[profile] = session
         if expired_sessions > 0:
             self._save()
-
-    def _load_raw_keyring_data(self):
-        json_data = keyring.get_password(self._keyring_service, self._keyring_username)
-        if json_data is None:
-            return {}
-        else:
-            return json.loads(json_data)
 
     def _save(self):
         """Pushes data from this object into the OS keyring."""
