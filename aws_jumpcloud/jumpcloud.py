@@ -44,23 +44,23 @@ class JumpCloudSession(object):
             self.logged_in = True
             Keyring().store_jumpcloud_timestamp(datetime.now(tz=timezone.utc))
         else:
-            self._handle_auth_failure(auth_resp, otp)
+            raise self._auth_failure_exception(auth_resp, otp)
 
-    def _handle_auth_failure(self, auth_resp, otp):
+    def _auth_failure_exception(self, auth_resp, otp):
         assert(auth_resp.status_code != 200)
         if otp is None and auth_resp.status_code == 302 and "error=4014" in auth_resp.headers['Location']:
-            raise JumpCloudMFARequired(auth_resp)
+            return JumpCloudMFARequired(auth_resp)
         elif auth_resp.status_code == 401:
             try:
                 if otp is not None and "multifactor" in auth_resp.json().get("error"):
-                    raise JumpCloudMFAFailure(auth_resp)
+                    return JumpCloudMFAFailure(auth_resp)
             except JSONDecodeError:
                 pass
-            raise JumpCloudAuthFailure(auth_resp)
+            return JumpCloudAuthFailure(auth_resp)
         elif auth_resp.status_code > 500:
-            raise JumpCloudServerError(auth_resp)
+            return JumpCloudServerError(auth_resp)
         else:
-            raise JumpCloudUnexpectedResponse(auth_resp)
+            return JumpCloudUnexpectedResponse(auth_resp)
 
     def _get_xsrf_token(self):
         if self.xsrf_token is None:
