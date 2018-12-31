@@ -29,22 +29,15 @@ def get_info(args):
 def list_profiles(args):
     keyring = Keyring()
     profiles = keyring.get_all_profiles()
+    sessions = keyring.get_all_sessions()
     if len(profiles) == 0:
         print("")
         print("No profiles found. Use \"aws-jumpcloud add <profile>\" to store a new profile.")
         sys.exit(0)
-    sessions = keyring.get_all_sessions()
-    output = []
-    for profile in sorted(profiles.values(), key=lambda p: p.name):
-        aws_account_desc = profile.aws_account_alias or profile.aws_account_id or "<unknown>"
-        aws_role = profile.aws_role or "<unknown>"
-        if profile.name in sessions:
-            expires_at = sessions[profile.name].expires_at.astimezone().strftime("%c %Z")
-        else:
-            expires_at = "<no active session>"
-        output.append([profile.name, aws_account_desc, aws_role, expires_at])
+
     print("")
-    _print_columns(["Profile", "AWS Account", "AWS Role", "IAM session expires"], output)
+    _print_columns(headers=["Profile", "AWS Account", "AWS Role", "IAM session expires"],
+                   rows=_format_profile_rows(profiles, sessions))
 
 
 def add_profile(args):
@@ -260,6 +253,19 @@ def _login(keyring, profile):
 
 def _get_program_name():
     return sys.argv[0]
+
+
+def _format_profile_rows(profiles, sessions):
+    rows = []
+    for p in sorted(profiles.values(), key=lambda p: p.name):
+        aws_account_desc = p.aws_account_alias or p.aws_account_id or "<unknown>"
+        aws_role = p.aws_role or "<unknown>"
+        if p.name in sessions:
+            expires_at = sessions[p.name].expires_at.astimezone().strftime("%c %Z")
+        else:
+            expires_at = "<no active session>"
+        rows.append([p.name, aws_account_desc, aws_role, expires_at])
+    return rows
 
 
 def _print_columns(headers, rows):
