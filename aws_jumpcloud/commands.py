@@ -76,6 +76,13 @@ def exec_command(args):
     sys.exit(result.returncode)
 
 
+def export_vars(args):
+    # Print export statements for a profile's AWS credentials
+    session = _get_aws_session(args.profile)
+    for (name, value) in session.get_environment_vars().items():
+        print(f"export {name}=\"{value}\"")
+
+
 def rotate_session(args):
     if args.all:
         _rotate_all_sessions(args)
