@@ -73,7 +73,7 @@ def exec_command(args):
         sys.exit(1)
     session = keyring.get_session(args.profile)
     if not session:
-        _login(keyring, profile)
+        _login_to_aws(keyring, profile)
         session = keyring.get_session(args.profile)
 
     args.command[0] = _which(args.command[0])
@@ -126,12 +126,12 @@ def _rotate_single_session(args, profile_name=None):
         sys.stderr.write(f"Error: Profile {profile_name} not found.\n")
         sys.exit(1)
 
-    _get_jumpcloud_session(profile_name)
+    _login_to_jumpcloud(profile_name)
 
     keyring.delete_session(profile_name)
     print(f"Temporary IAM session for {profile_name} removed.")
 
-    _login(keyring, profile)
+    _login_to_aws(keyring, profile)
     session = keyring.get_session(profile_name)
     expires_at = session.expires_at.strftime('%c %Z')
     print(f"AWS temporary session rotated; new session valid until {expires_at}.\n")
@@ -145,17 +145,16 @@ def _rotate_all_sessions(args):
         print("No profiles found. Use \"aws-jumpcloud add <profile>\" to store a new profile.")
         sys.exit(0)
 
-    _get_jumpcloud_session('--all')
+    _login_to_jumpcloud('--all')
     print("")
 
     for profile in profiles.values():
         _rotate_single_session(args, profile.name)
 
 
-def _get_jumpcloud_session(profile_name):
-    # This function returns a JumpCloudSession with the user logged in. If a
-    # session is already exists in the current process, it uses that;
-    # otherwise it creates a new one.
+def _login_to_jumpcloud(profile_name):
+    # Returns a JumpCloudSession with the user logged in. If a session already
+    # in the current process, it uses that; otherwise it creates a new one.
     global _session
     if _session:
         return _session
@@ -204,8 +203,9 @@ def _get_jumpcloud_session(profile_name):
     return _session
 
 
-def _login(keyring, profile):
-    session = _get_jumpcloud_session(profile.name)
+def _login_to_aws(keyring, profile):
+    # Returns an AWSSession with temporary credentials for the given profile.
+    session = _login_to_jumpcloud(profile.name)
     sys.stderr.write("Attempting SSO authentication to Amazon Web Services...\n")
     saml_assertion = session.get_aws_saml_assertion(profile)
     roles = get_assertion_roles(saml_assertion)
