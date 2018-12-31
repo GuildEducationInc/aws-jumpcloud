@@ -76,20 +76,7 @@ def exec_command(args):
         _login(keyring, profile)
         session = keyring.get_session(args.profile)
 
-    # Find the full path to the program that the user wants to run, otherwise
-    # subprocess.run() won't be able to find it. (I'm not sure exactly why this
-    # happens -- it looks like subprocess.run() can find programs in /usr/bin
-    # but not /usr/local/bin?)
-    result = subprocess.run(["which", args.command[0]], stdout=PIPE)
-    if result.returncode == 0 and len(result.stdout.strip()) > 0:
-        args.command[0] = result.stdout.strip()
-    elif result.returncode == 1:
-        sys.stderr.write(f"{args.command[0]}: command not found\n")
-        sys.exit(127)
-    else:
-        sys.stdout.write(result.stdout)
-        sys.exit(result.returncode)
-
+    args.command[0] = _which(args.command[0])
     # Run the command that the user wanted, with AWS credentials in the environment
     os.environ['AWS_ACCESS_KEY_ID'] = session.access_key_id
     os.environ['AWS_SECRET_ACCESS_KEY'] = session.secret_access_key
@@ -249,6 +236,21 @@ def _login(keyring, profile):
 
     sys.stderr.write("\n")
     return session
+
+
+def _which(command):
+    # Find the full path to the program that the user wants to run, otherwise
+    # subprocess.run() won't be able to find it. (I'm not sure exactly why this
+    # happens -- it looks like subprocess.run() can find programs in /usr/bin
+    # but not /usr/local/bin?)
+    result = subprocess.run(["which", command], stdout=PIPE)
+    if result.returncode == 1:
+        sys.stderr.write(f"{command}: command not found\n")
+        sys.exit(127)
+    elif result.returncode > 0 or len(result.stdout.strip()) == 0:
+        sys.stdout.write(result.stdout)
+        sys.exit(result.returncode)
+    return result.stdout.strip()
 
 
 def _get_program_name():
