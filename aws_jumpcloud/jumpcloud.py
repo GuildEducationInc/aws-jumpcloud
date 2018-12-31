@@ -49,14 +49,10 @@ class JumpCloudSession(object):
     def _auth_failure_exception(self, auth_resp, otp):
         assert(auth_resp.status_code != 200)
 
-        if otp is None and auth_resp.status_code == 302 and "error=4014" in auth_resp.headers['Location']:
+        if auth_resp.status_code == 302 and otp is None and "error=4014" in auth_resp.headers['Location']:
             exception = JumpCloudMFARequired(auth_resp)
         elif auth_resp.status_code == 401:
-            try:
-                error_msg = auth_resp.json().get("error", "")
-            except JSONDecodeError:
-                error_msg = ""
-            if otp is not None and "multifactor" in error_msg:
+            if otp is not None and "multifactor" in self._get_error_msg(auth_resp):
                 exception = JumpCloudMFAFailure(auth_resp)
             else:
                 exception = JumpCloudAuthFailure(auth_resp)
@@ -66,6 +62,12 @@ class JumpCloudSession(object):
             exception = JumpCloudUnexpectedResponse(auth_resp)
 
         return exception
+
+    def _get_error_msg(self, resp):
+        try:
+            return resp.json().get("error", "")
+        except JSONDecodeError:
+            return ""
 
     def _get_xsrf_token(self):
         if self.xsrf_token is None:
