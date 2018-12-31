@@ -49,13 +49,12 @@ class JumpCloudSession(object):
     def _auth_failure_exception(self, auth_resp, otp):
         assert(auth_resp.status_code != 200)
 
-        if auth_resp.status_code == 302 and otp is None and "error=4014" in auth_resp.headers['Location']:
+        if auth_resp.status_code == 302 and self._is_mfa_missing(auth_resp, otp):
             exception = JumpCloudMFARequired(auth_resp)
+        elif auth_resp.status_code == 401 and self._is_mfa_failure(auth_resp, otp):
+            exception = JumpCloudMFAFailure(auth_resp)
         elif auth_resp.status_code == 401:
-            if otp is not None and self._is_mfa_failure(auth_resp):
-                exception = JumpCloudMFAFailure(auth_resp)
-            else:
-                exception = JumpCloudAuthFailure(auth_resp)
+            exception = JumpCloudAuthFailure(auth_resp)
         elif auth_resp.status_code > 500:
             exception = JumpCloudServerError(auth_resp)
         else:
@@ -63,9 +62,12 @@ class JumpCloudSession(object):
 
         return exception
 
-    def _is_mfa_failure(self, auth_resp):
+    def _is_mfa_missing(self, auth_resp, otp):
+        return otp is None and "error=4014" in auth_resp.headers['Location']
+
+    def _is_mfa_failure(self, auth_resp, otp):
         try:
-            return "multifactor" in auth_resp.json().get("error", "")
+            return otp is not None and "multifactor" in auth_resp.json().get("error", "")
         except JSONDecodeError:
             return False
 
