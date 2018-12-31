@@ -63,9 +63,9 @@ class JumpCloudSession(object):
 
         return exception
 
-    def _is_mfa_failure(self, resp):
+    def _is_mfa_failure(self, auth_resp):
         try:
-            return "multifactor" in resp.json().get("error", "")
+            return "multifactor" in auth_resp.json().get("error", "")
         except JSONDecodeError:
             return False
 
