@@ -139,7 +139,7 @@ class Keyring(object):
     def _load_raw_keyring_data(self):
         json_data = keyring.get_password(self._keyring_service, self._keyring_username)
         if json_data is None:
-            return = {}
+            return {}
         else:
             return json.loads(json_data)
 
