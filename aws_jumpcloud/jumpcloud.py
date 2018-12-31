@@ -43,7 +43,12 @@ class JumpCloudSession(object):
         if auth_resp.status_code == 200:
             self.logged_in = True
             Keyring().store_jumpcloud_timestamp(datetime.now(tz=timezone.utc))
-        elif otp is None and auth_resp.status_code == 302 and "error=4014" in auth_resp.headers['Location']:
+        else:
+            self._handle_auth_failure(auth_resp, otp)
+
+    def _handle_auth_failure(self, auth_resp, otp):
+        assert(auth_resp.status_code != 200)
+        if otp is None and auth_resp.status_code == 302 and "error=4014" in auth_resp.headers['Location']:
             raise JumpCloudMFARequired(auth_resp)
         elif auth_resp.status_code == 401:
             try:
