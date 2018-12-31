@@ -140,16 +140,10 @@ class Keyring(object):
             return json.loads(json_data)
 
     def _purge_expired_sessions(self):
-        expired_sessions = 0
-        for profile, session in self._aws_sessions.items():
-            if session.expired():
-                # Don't save expired sessions in the dict, and note that we
-                # found expired sessions so that we can remove them from the OS
-                # keyring
-                expired_sessions += 1
-            else:
-                self._aws_sessions[profile] = session
-        if expired_sessions > 0:
+        expired_sessions = [name for (name, session) in self._aws_sessions.items() if session.expired()]
+        for p in expired_sessions:
+            del self._aws_sessions[p]
+        if expired_sessions:
             self._save()
 
     def _save(self):
