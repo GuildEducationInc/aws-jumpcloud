@@ -2,12 +2,12 @@ import json
 
 
 class Profile(object):
-    def __init__(self, name, jumpcloud_url, aws_account_id=None, aws_role=None, aws_account_alias=None):
+    def __init__(self, name, jumpcloud_url):
         self.name = name
         self.jumpcloud_url = jumpcloud_url
-        self.aws_account_id = aws_account_id
-        self.aws_role = aws_role
-        self.aws_account_alias = aws_account_alias
+        self.aws_account_id = None
+        self.aws_role = None
+        self.aws_account_alias = None
 
     @property
     def role_arn(self):
@@ -25,4 +25,8 @@ class Profile(object):
     @classmethod
     def loads(cls, json_string):
         data = json.loads(json_string)
-        return Profile(**data)
+        p = Profile(name=data['name'], jumpcloud_url=data['jumpcloud_url'])
+        p.aws_account_id = data['aws_account_id']
+        p.aws_role = data['aws_role']
+        p.aws_account_alias = data['aws_account_alias']
+        return p
