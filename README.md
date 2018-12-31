@@ -21,10 +21,20 @@ Allows you to authenticate with AWS using your JumpCloud credentials. Based on i
 
 Prerequisite: Python 3.6 or newer.
 
-To install, just point `pip3` at the latest GitHub release:
+If you're running macOS but don't have Python 3, I recommend installing it with [Homebrew](https://brew.sh/). The command `brew install python` will install it without breaking your existing Python installation.
+
+To install `aws-jumpcloud` itself, just point `pip3` at the latest GitHub release:
 ```bash
 $ pip3 install https://github.com/GuildEducationInc/aws-jumpcloud/archive/1.1.1.tar.gz
 ```
+
+### Migrating from `~/.aws` credentials
+
+If you were previously using persistent credentials in `~/.aws/config`, here are some tips for moving to JumpCloud SSO:
+* Since you won't be using those persistent credentials, remove that file when installing `aws-jumpcloud`.
+* If you've been setting `AWS_DEFAULT_PROFILE` in your `~/.bash_profile` (or equivalent), you should stop setting that, since you're not using the standard AWS config file
+* On the other hand, since AWS profiles point to a specific region, you'll probably want to add `AWS_DEFAULT_REGION` to your `~/.bash_profile` (or equivalent). (`export AWS_DEFAULT_REGION=us-west-1`, for example.)
+* If nothing else is using the IAM access keys previously in your `~/.aws/config`, disable or delete the access keys from the [IAM Console](https://console.aws.amazon.com/iam/home#/users). From that page you can search for the access key itself, or browse/search by username.
 
 
 ## Usage
