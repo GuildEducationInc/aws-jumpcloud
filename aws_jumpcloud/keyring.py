@@ -111,11 +111,7 @@ class Keyring(object):
     def _load(self):
         """Pulls data from the OS keyring into this object. Automatically
         deletes any expired sessions found in the OS keyring."""
-        json_data = keyring.get_password(self._keyring_service, self._keyring_username)
-        if json_data is None:
-            keyring_data = {}
-        else:
-            keyring_data = json.loads(json_data)
+        keyring_data = _load_raw_keyring_data()
         self._jumpcloud_email = keyring_data.get("jumpcloud_email") or None
         self._jumpcloud_password = keyring_data.get("jumpcloud_password") or None
         timestamp = keyring_data.get("jumpcloud_timestamp")
@@ -124,9 +120,9 @@ class Keyring(object):
 
         self._profiles = {}
         for profile_str in keyring_data.get("profiles", []):
-            profile = Profile.loads(profile_str)
-            self._profiles[profile.name] = profile
+            self._profiles[profile.name] = Profile.loads(profile_str)
         self._aws_sessions = {}
+
         expired_sessions = 0
         for (profile, session_str) in keyring_data.get("aws_sessions", {}).items():
             session = AWSSession.loads(session_str)
@@ -139,6 +135,13 @@ class Keyring(object):
                 self._aws_sessions[profile] = session
         if expired_sessions > 0:
             self._save()
+
+    def _load_raw_keyring_data(self):
+        json_data = keyring.get_password(self._keyring_service, self._keyring_username)
+        if json_data is None:
+            return = {}
+        else:
+            return json.loads(json_data)
 
     def _save(self):
         """Pushes data from this object into the OS keyring."""
