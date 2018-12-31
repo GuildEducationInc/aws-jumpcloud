@@ -76,12 +76,10 @@ def exec_command(args):
         _login_to_aws(keyring, profile)
         session = keyring.get_session(args.profile)
 
-    args.command[0] = _which(args.command[0])
     # Run the command that the user wanted, with AWS credentials in the environment
-    os.environ['AWS_ACCESS_KEY_ID'] = session.access_key_id
-    os.environ['AWS_SECRET_ACCESS_KEY'] = session.secret_access_key
-    os.environ['AWS_SECURITY_TOKEN'] = session.session_token
-    os.environ['AWS_SESSION_TOKEN'] = session.session_token
+    args.command[0] = _which(args.command[0])
+    for (name, value) in session.get_environment_vars().items():
+        os.environ[name] = value
     result = subprocess.run(args.command)
     sys.exit(result.returncode)
 

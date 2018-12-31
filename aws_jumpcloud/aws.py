@@ -41,6 +41,12 @@ class AWSSession(object):
                            "session_token": self.session_token,
                            "expires_at": self.expires_at.timestamp()})
 
+    def get_environment_vars(self):
+        return {"AWS_ACCESS_KEY_ID": self.access_key_id,
+                "AWS_SECRET_ACCESS_KEY": self.secret_access_key,
+                "AWS_SECURITY_TOKEN": self.session_token,
+                "AWS_SESSION_TOKEN": self.session_token}
+
     @classmethod
     def loads(cls, json_string):
         data = json.loads(json_string)
