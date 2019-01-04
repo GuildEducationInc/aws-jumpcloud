@@ -19,6 +19,15 @@ Allows you to authenticate with AWS using your JumpCloud credentials. Based on i
 
 ## Installation
 
+### via [Homebrew](https://brew.sh/)
+
+```bash
+brew tap GuildEducationInc/aws-jumpcloud https://github.com/GuildEducationInc/aws-jumpcloud.git
+brew install aws-jumpcloud
+```
+
+### Manual
+
 Prerequisite: Python 3.6 or newer.
 
 If you're running macOS but don't have Python 3, I recommend installing it with [Homebrew](https://brew.sh/). The command `brew install python` will install it without breaking your existing Python installation.
