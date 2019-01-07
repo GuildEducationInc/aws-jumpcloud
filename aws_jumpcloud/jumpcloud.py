@@ -58,7 +58,7 @@ class JumpCloudSession(object):
         elif auth_resp.status_code > 500:
             exception = JumpCloudServerError(auth_resp)
         else:
-            exception = JumpCloudUnexpectedResponse(auth_resp)
+            exception = JumpCloudUnexpectedStatus(auth_resp)
 
         return exception
 
@@ -85,8 +85,10 @@ class JumpCloudSession(object):
     def get_aws_saml_assertion(self, profile):
         assert(self.logged_in)
         aws_resp = self.http.get(profile.jumpcloud_url)
-        assert(aws_resp.status_code == 200)
-        assert("SAMLResponse" in aws_resp.text)
+        if aws_resp.status_code != 200:
+            raise JumpCloudUnexpectedStatus(aws_resp)
+        if "SAMLResponse" not in aws_resp.text:
+            raise JumpCloudMissingSAMLResponse(aws_resp)
         return self._extract_saml_response(aws_resp.text)
 
     def _extract_saml_response(self, html):
@@ -133,9 +135,18 @@ class JumpCloudMFAFailure(JumpCloudError):
         JumpCloudError.__init__(self, message, resp)
 
 
-class JumpCloudUnexpectedResponse(JumpCloudError):
+class JumpCloudUnexpectedStatus(JumpCloudError):
     """Indicates a response that we weren't expecting, i.e. that JumpCloud
     changed their auth workflow or we didn't reverse-engineer it properly."""
     def __init__(self, resp):
         message = f"JumpCloud returned unexpected HTTP {resp.status_code} response"
+        JumpCloudError.__init__(self, message, resp)
+
+
+class JumpCloudMissingSAMLResponse(JumpCloudError):
+    """Indicates that the SSO URL did not include the expected SAMLResponse
+    field. Either the profile contains an incorrect URL, or JumpCloud changed
+    their SSO workflow."""
+    def __init__(self, resp):
+        message = "JumpCloud's SSO response did not contain the expected \"SAMLResponse\" field."
         JumpCloudError.__init__(self, message, resp)
