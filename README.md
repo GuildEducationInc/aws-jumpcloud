@@ -64,7 +64,7 @@ Typically you'll start by adding a profile for your primary AWS integration. Thi
 
 ```
 $ aws-jumpcloud add duff
-Enter the JumpCloud SSO URL for duff: https://sso.jumpcloud.com/saml2/aws
+Enter the JumpCloud SSO URL for duff: <url copied from the JumpCloud Console>
 Profile duff added.
 ```
 
