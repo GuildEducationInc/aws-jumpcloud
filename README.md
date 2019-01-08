@@ -34,7 +34,7 @@ If you're running macOS but don't have Python 3, I recommend installing it with 
 
 To install `aws-jumpcloud` itself, just point `pip3` at the latest GitHub release:
 ```bash
-$ pip3 install https://github.com/GuildEducationInc/aws-jumpcloud/archive/1.1.2.tar.gz
+$ pip3 install https://github.com/GuildEducationInc/aws-jumpcloud/archive/1.2.0.tar.gz
 ```
 
 ### Migrating from `~/.aws` credentials
