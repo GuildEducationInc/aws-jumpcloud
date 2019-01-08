@@ -109,6 +109,22 @@ $ aws-jumpcloud exec duff -- aws s3 ls s3://duff-logs-us-east-1/
 ```
 
 
+### Exporting credentials into your environment
+
+It's a small hassle to put `aws-jumpcloud exec profile` before every AWS-related command that you run. The `aws-jumpcloud export` command displays the `export` commands that will load your temporary AWS credentials directly into your shell. This will let you run AWS commands directly from the shell, although it won't recognize when your temporary credentials have expired.
+
+If you're not using multi-factor authentication, you can put a command like this into your `.bash_profile` to load the AWS into every shell:
+
+```bash
+eval "$(aws-jumpcloud export duff)"
+```
+
+If you use multi-factor authentication, the command needs to be a little more complicated. Before callling `aws-jumpcloud` you must first make sure you have active AWS credentials for the given profile. The two-step dance is necessary because we can't safely prompt for your MFA token when output isn't going to stdout, as is the case with `$()`.
+
+```bash
+aws-jumpcloud exec duff -- true && eval "$(aws-jumpcloud export duff)"
+```
+
 ### Rotating credentials
 
 After a profile's temporary IAM credentials expire, `aws-jumpcloud` will automatically delete the credentials from its keychain. New temporary credentials will automatically be requested the next time you attempt to use that profile. However, you can also rotate the credentials at any time and request new credentials immediately.

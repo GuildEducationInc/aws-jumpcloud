@@ -30,6 +30,7 @@ def _build_parser():
     _add_add_command(subparsers)
     _add_remove_command(subparsers)
     _add_exec_command(subparsers)
+    _add_export_command(subparsers)
     _add_rotate_command(subparsers)
     return parser
 
@@ -71,6 +72,13 @@ def _add_exec_command(p):
     parser_exec.add_argument("profile", help="name of the profile")
     parser_exec.add_argument("command", nargs="+")
     parser_exec.set_defaults(func=commands.exec_command)
+
+
+def _add_export_command(p):
+    parser_export = p.add_parser(
+        "export", help="show export statements to load AWS credentials into your environment")
+    parser_export.add_argument("profile", help="name of the profile")
+    parser_export.set_defaults(func=commands.export_vars)
 
 
 def _add_rotate_command(p):
