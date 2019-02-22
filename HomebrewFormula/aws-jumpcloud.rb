@@ -10,8 +10,7 @@ class AwsJumpcloud < Formula
 
   def install
     venv = virtualenv_create(libexec, "python3")
-    system libexec/"bin/pip", "install", "-v", "--no-binary", ":all:",
-                              "--ignore-installed", buildpath
+    system libexec/"bin/pip", "install", "-v", "--ignore-installed", buildpath
     system libexec/"bin/pip", "uninstall", "-y", "aws-jumpcloud"
     venv.pip_install_and_link buildpath
   end
