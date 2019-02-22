@@ -21,13 +21,10 @@ Allows you to authenticate with AWS using your JumpCloud credentials. Based on i
 
 ### via [Homebrew](https://brew.sh/)
 
-:warn: **As of February 2019, Homebrew distributes a [broken version of `virtualenv`](https://github.com/Homebrew/brew/pull/5697#issuecomment-462516958). That means this formula won't install, so skip ahead to the manual installation instructions for now.**
-
-TODO: Give it a few weeks and check to see if this works. Stafford researched more about the issue and it traces back to [this setuptools issue](https://github.com/pypa/setuptools/issues/1642#issuecomment-457648989).
-
-~`brew tap GuildEducationInc/aws-jumpcloud https://github.com/GuildEducationInc/aws-jumpcloud.git`~
-
-~`brew install aws-jumpcloud`~
+```bash
+brew tap GuildEducationInc/aws-jumpcloud https://github.com/GuildEducationInc/aws-jumpcloud.git
+brew install aws-jumpcloud
+```
 
 ### Manual
 
