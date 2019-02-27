@@ -71,12 +71,6 @@ def assume_role_with_saml(saml_role, saml_assertion_xml):
 
 
 def get_account_alias(session):
-    client = boto3.client("iam", aws_access_key_id=session.access_key_id,
-                          aws_secret_access_key=session.secret_access_key,
-                          aws_session_token=session.session_token)
-    resp = client.list_account_aliases()
-    assert(resp['ResponseMetadata']['HTTPStatusCode'] == 200)
-    return resp['AccountAliases'][0] if resp['AccountAliases'] else None
     try:
         client = boto3.client("iam", access_key_id=session.access_key_id,
                               secret_access_key=session.secret_access_key,
