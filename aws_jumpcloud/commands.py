@@ -6,12 +6,14 @@ import subprocess
 import textwrap
 from subprocess import PIPE
 
-from aws_jumpcloud.aws import assume_role_with_saml, get_account_alias, parse_arn
+from aws_jumpcloud.aws import assume_role, assume_role_with_saml
+from aws_jumpcloud.aws import get_account_alias, get_role_session_name
+from aws_jumpcloud.aws import is_arn, parse_arn
 from aws_jumpcloud.jumpcloud import JumpCloudSession, JumpCloudError, JumpCloudAuthFailure
 from aws_jumpcloud.jumpcloud import JumpCloudMFARequired, JumpCloudServerError
 from aws_jumpcloud.jumpcloud import JumpCloudUnexpectedStatus, JumpCloudMissingSAMLResponse
 from aws_jumpcloud.keyring import Keyring
-from aws_jumpcloud.profile import Profile
+from aws_jumpcloud.profile import AssumedRole, Profile
 from aws_jumpcloud.saml import get_assertion_roles
 
 _session = None
@@ -43,6 +45,10 @@ def list_profiles(args):
 
 
 def add_profile(args):
+    if args.external_id and not args.role_to_assume:
+        _print_error("Error: Cannot use --external-id without --role.")
+        sys.exit(1)
+
     keyring = Keyring()
     if keyring.get_profile(args.profile):
         _print_error(f"Error: Profile \"{args.profile}\" already exists. If you want to modify "
@@ -55,7 +61,19 @@ def add_profile(args):
         _print_error("Error: That's not a valid JumpCloud SSO URL. SSO URLs must "
                      "start with \"https://sso.jumpcloud.com/saml2/\".")
         sys.exit(1)
-    profile = Profile(args.profile, jumpcloud_url)
+    if args.role_to_assume:
+        if is_arn(args.role_to_assume):
+            arn_parts = parse_arn(args.role_to_assume)
+            assumed_role = AssumedRole(aws_account_id=arn_parts.aws_account_id,
+                                       aws_role=arn_parts.aws_role,
+                                       external_id=args.external_id)
+        else:
+            assumed_role = AssumedRole(aws_account_id=None,
+                                       aws_role=args.role_to_assume,
+                                       external_id=args.external_id)
+    else:
+        assumed_role = None
+    profile = Profile(args.profile, jumpcloud_url, assumed_role)
     keyring.store_profile(profile)
     print(f"Profile \"{args.profile}\" added.")
 
@@ -248,14 +266,24 @@ def _login_to_aws(keyring, profile):
         keyring.store_profile(profile)
 
     session = assume_role_with_saml(role, saml_assertion)
-    keyring.store_session(profile.name, session)
 
-    # Update the AWS account alias on each login
+    # Update the AWS account alias on each login. The alias refers to the
+    # account used to login, not any assumed role (which happens below).
     alias = get_account_alias(session)
     if alias != profile.aws_account_alias:
         profile.aws_account_alias = alias
         keyring.store_profile(profile)
 
+    if profile.role_to_assume:
+        if not profile.role_to_assume.aws_account_id:
+            profile.role_to_assume.aws_account_id = profile.aws_account_id
+            keyring.store_profile(profile)
+        sys.stderr.write(f"Assuming role {profile.role_to_assume.arn}...\n")
+        email = keyring.get_jumpcloud_email()
+        role_session_name = get_role_session_name(email)
+        session = assume_role(session, profile.role_to_assume, role_session_name)
+
+    keyring.store_session(profile.name, session)
     sys.stderr.write("\n")
     return session
 
@@ -282,8 +310,14 @@ def _get_program_name():
 def _format_profile_rows(profiles, sessions):
     rows = []
     for p in sorted(profiles.values(), key=lambda p: p.name):
-        aws_account_desc = p.aws_account_alias or p.aws_account_id or "<unknown>"
-        aws_role = p.aws_role or "<unknown>"
+        if p.role_to_assume and p.role_to_assume.aws_account_id:
+            aws_account_desc = p.role_to_assume.aws_account_id
+        else:
+            aws_account_desc = p.aws_account_alias or p.aws_account_id or "<unknown>"
+        if p.role_to_assume:
+            aws_role = p.role_to_assume.aws_role
+        else:
+            aws_role = p.aws_role
         if p.name in sessions:
             expires_at = sessions[p.name].expires_at.astimezone().strftime("%c %Z")
         else:

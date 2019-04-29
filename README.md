@@ -147,6 +147,39 @@ aws-jumpcloud exec duff -- true && eval "$(aws-jumpcloud export duff)"
 ```
 
 
+### Adding a profile with an assumed role
+
+You may find that you need to interact with AWS using a different IAM role than the one connected to JumpCloud. For example, your JumpCloud integration may only grant read-only access to resources in the AWS Console, and you need to assume an expanded role in order to make changes. Or, if your company has more than one AWS account, you may login to a single AWS account, and then assume a role in another account to access the resources in that account.
+
+`aws-jumpcloud` profiles can be configured to automatically assume another IAM role when you establish a session. Each time you establish a new AWS session using such a profiles, `aws-jumpcloud` will login through JumpCloud, and then immediately call the [AssumeRole API](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html) to request credentials for the other role. The role can be in your own AWS account or in another AWS account.
+
+To configure a profile to assume a role on each login, add the `--role` parameter to the `aws-jumpcloud add` command. Here's an example of assuming a role in the same account:
+
+```
+$ aws-jumpcloud add --role=deployer duff-deployer
+Enter the JumpCloud SSO URL for duff-deployer: <url copied from the JumpCloud Console>
+Profile duff-deployer added.
+```
+
+You can specify the assumed role by name or ARN, which allows you to assume a role in another AWS account:
+
+```
+$ aws-jumpcloud add --role=arn:aws:iam::619893369699:role/deployer subaccount-deployer
+Enter the JumpCloud SSO URL for subaccount-deployer: <url copied from the JumpCloud Console>
+Profile duff-deployer added.
+```
+
+If the role requires an External ID to be provided to the AssumeRole API, that must be specified when creating the `aws-jumpcloud` profile, using the `--external-id` parameter. For example:
+
+```
+$ aws-jumpcloud add --role=deployer --external-id=QgbnxwqT2w duff-deployer
+Enter the JumpCloud SSO URL for duff-deployer: <url copied from the JumpCloud Console>
+Profile duff-deployer added.
+```
+
+The AWS IAM User Guide contains [more information about assuming IAM roles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use.html).
+
+
 ### Rotating credentials
 
 After a profile's temporary IAM credentials expire, `aws-jumpcloud` will automatically delete the credentials from its keychain. New temporary credentials will automatically be requested the next time you attempt to use that profile. However, you can also rotate the credentials at any time and request new credentials immediately.

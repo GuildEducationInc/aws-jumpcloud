@@ -54,6 +54,10 @@ def _add_add_command(p):
     parser_add = p.add_parser("add", help="add a new profile")
     parser_add.add_argument("profile", help="name of the profile")
     parser_add.add_argument("url", help="JumpCloud SSO URL for this profile", nargs="?")
+    parser_add.add_argument("-r", "--role", help="IAM role to assume after login (name or ARN)",
+                            dest="role_to_assume", metavar="ROLE")
+    parser_add.add_argument("--external-id", help="External ID to provide when assuming a role after login",
+                            metavar="ID")
     parser_add.set_defaults(func=commands.add_profile)
 
 
