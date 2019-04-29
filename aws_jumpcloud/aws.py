@@ -3,6 +3,7 @@ from collections import namedtuple
 from datetime import datetime, timedelta, timezone
 import json
 import re
+import time
 
 import boto3
 
@@ -53,6 +54,14 @@ class AWSSession(object):
         data['expires_at'] = datetime.fromtimestamp(data['expires_at'], tz=timezone.utc)
         return AWSSession(**data)
 
+    @classmethod
+    def from_sts(cls, sts_resp):
+        assert(sts_resp['ResponseMetadata']['HTTPStatusCode'] == 200)
+        return AWSSession(access_key_id=sts_resp['Credentials']['AccessKeyId'],
+                          secret_access_key=sts_resp['Credentials']['SecretAccessKey'],
+                          session_token=sts_resp['Credentials']['SessionToken'],
+                          expires_at=sts_resp['Credentials']['Expiration'])
+
 
 def assume_role_with_saml(saml_role, saml_assertion_xml):
     client = boto3.client('sts')
@@ -62,19 +71,14 @@ def assume_role_with_saml(saml_role, saml_assertion_xml):
         PrincipalArn=saml_role.principal_arn,
         SAMLAssertion=base64.b64encode(saml_assertion_xml).decode("ascii"),
         DurationSeconds=duration)
-    assert(sts_resp['ResponseMetadata']['HTTPStatusCode'] == 200)
-
-    return AWSSession(access_key_id=sts_resp['Credentials']['AccessKeyId'],
-                      secret_access_key=sts_resp['Credentials']['SecretAccessKey'],
-                      session_token=sts_resp['Credentials']['SessionToken'],
-                      expires_at=sts_resp['Credentials']['Expiration'])
+    return AWSSession.from_sts(sts_resp)
 
 
 def get_account_alias(session):
     try:
-        client = boto3.client("iam", access_key_id=session.access_key_id,
-                              secret_access_key=session.secret_access_key,
-                              session_token=session.session_token)
+        client = boto3.client("iam", aws_access_key_id=session.access_key_id,
+                              aws_secret_access_key=session.secret_access_key,
+                              aws_session_token=session.session_token)
         resp = client.list_account_aliases()
         assert(resp['ResponseMetadata']['HTTPStatusCode'] == 200)
         return resp['AccountAliases'][0] if resp['AccountAliases'] else None
@@ -83,5 +87,30 @@ def get_account_alias(session):
         return None
 
 
+def is_arn(role_arn):
+    return not not ROLE_ARN_REGEXP.match(role_arn)
+
+
 def parse_arn(role_arn):
     return ParseResult(*ROLE_ARN_REGEXP.match(role_arn).groups())
+
+
+def build_arn(aws_account_id, role_name):
+    return f"arn:aws:iam::{aws_account_id}:role/{role_name}"
+
+
+def assume_role(session, role_to_assume, role_session_name):
+    client = boto3.client('sts', aws_access_key_id=session.access_key_id,
+                          aws_secret_access_key=session.secret_access_key,
+                          aws_session_token=session.session_token)
+    if role_to_assume.external_id:
+        kwargs = {"ExternalId": role_to_assume.external_id}
+    else:
+        kwargs = {}
+    sts_resp = client.assume_role(RoleArn=role_to_assume.arn,
+                                  RoleSessionName=role_session_name, **kwargs)
+    return AWSSession.from_sts(sts_resp)
+
+
+def get_role_session_name(user_identifier):
+    return "-".join(["aws-jumpcloud", user_identifier, str(int(time.time()))])
