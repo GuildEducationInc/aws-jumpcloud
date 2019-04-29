@@ -170,6 +170,15 @@ $ pycodestyle *.py aws_jumpcloud/
 $ pylint -E *.py aws_jumpcloud/
 ```
 
+### Rolling out a new version
+
+1. Merge any outstanding PRs/commits into the into `master` branch.
+2. Update the version number in [version.py](https://github.com/GuildEducationInc/aws-jumpcloud/blob/master/aws_jumpcloud/version.py) and in the `pip3 install` line of [README.md](https://github.com/GuildEducationInc/aws-jumpcloud/blob/master/README.md). Save these changes in `master` also.
+3. [Create a new GitHub release](https://github.com/GuildEducationInc/aws-jumpcloud/releases/new) with a tag that matches the version number (e.g. `1.2.3`). Add some release notes to describe what's changed, and publish the release.
+4. Download the `tar.gz` archive from the [releases page](https://github.com/GuildEducationInc/aws-jumpcloud/releases) and calculate the sha256 checksum. On macOS, you can use the tool `sha256sum`.
+5. Update the [URL and sha256 checksum in the Homebrew formula](https://github.com/GuildEducationInc/aws-jumpcloud/blob/master/HomebrewFormula/aws-jumpcloud.rb#L6-L7) and save that to the `master` branch.
+6. On macOS, run `brew update && brew upgrade` to confirm that the Homebrew formula was saved correctly.
+
 ## Contributing
 
 aws-jumpcloud is open-source and licensed under the [MIT License](LICENSE).
