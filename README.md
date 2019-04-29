@@ -14,7 +14,7 @@ Allows you to authenticate with AWS using your JumpCloud credentials. Based on i
 * Adding SAML support to `aws-vault` would be a big project.
 * `aws-okta` doesn't look amenable to adding a second identity provider -- not to mention, it would go against the name.
 * `jumpcloud_aws` was broken when I tried to use it. It also didn't support MFA or more than one integration.
-* There are also a few other tools on GitHub which might work well, I didn't tried all of them.
+* There are also a few other tools on GitHub which might work well, I didn't try all of them.
 
 
 ## Installation
@@ -34,7 +34,7 @@ If you're running macOS but don't have Python 3, I recommend installing it with 
 
 To install `aws-jumpcloud` itself, just point `pip3` at the latest GitHub release:
 ```bash
-$ pip3 install https://github.com/GuildEducationInc/aws-jumpcloud/archive/1.2.1.tar.gz
+$ pip3 install https://github.com/GuildEducationInc/aws-jumpcloud/archive/2.0.0.tar.gz
 ```
 
 ### Migrating from `~/.aws` credentials
