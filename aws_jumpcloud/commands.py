@@ -49,7 +49,8 @@ def add_profile(args):
                      "the profile, remove the profile and add it again.")
         sys.exit(1)
 
-    jumpcloud_url = input(f"Enter the JumpCloud SSO URL for \"{args.profile}\": ").strip()
+    jumpcloud_url = args.url or input(f"Enter the JumpCloud SSO URL for \"{args.profile}\": ")
+    jumpcloud_url = jumpcloud_url.strip()
     if not jumpcloud_url.startswith("https://sso.jumpcloud.com/saml2/"):
         _print_error("Error: That's not a valid JumpCloud SSO URL. SSO URLs must "
                      "start with \"https://sso.jumpcloud.com/saml2/\".")

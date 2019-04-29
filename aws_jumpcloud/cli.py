@@ -53,6 +53,7 @@ def _add_list_command(p):
 def _add_add_command(p):
     parser_add = p.add_parser("add", help="add a new profile")
     parser_add.add_argument("profile", help="name of the profile")
+    parser_add.add_argument("url", help="JumpCloud SSO URL for this profile", nargs="?")
     parser_add.set_defaults(func=commands.add_profile)
 
 
