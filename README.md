@@ -75,10 +75,11 @@ You can view all profiles registered in your `aws-jumpcloud` keychain:
 ```
 $ aws-jumpcloud list
 
-Profile           AWS Account       AWS Role     IAM session expires    
-================  ================  ===========  =====================
-duff              <unknown>         <unknown>    <no active session>    
+Profile           AWS Account       AWS Role       IAM session expires
+================  ================  =============  =====================
+duff              544300394404      JumpCloudDevs  <no active session>
 ```
+
 
 ### Running a command
 
@@ -89,7 +90,7 @@ The first time you login to JumpCloud, you will be prompted for your JumpCloud e
 ```
 $ aws-jumpcloud exec duff -- aws s3 ls
 Enter your JumpCloud email address: duffman@duff-beer.com
-Enter your JumpCloud password: 
+Enter your JumpCloud password:
 JumpCloud login details saved in your OS keychain.
 Enter your JumpCloud multi-factor auth code: 798708
 Attempting SSO authentication to Amazon Web Services...
@@ -108,6 +109,26 @@ $ aws-jumpcloud exec duff -- aws s3 ls s3://duff-logs-us-east-1/
 2018-11-14 18:20:08        462 2018-11-15-01-20-07-819FA67DCE9E7DE2
 ```
 
+### Removing profiles
+
+You can remove a profile if you no longer need it:
+
+```
+$ aws-jumpcloud remove duff
+Profile duff and temporary IAM session removed.
+```
+
+And you can clear `aws-jumpcloud`'s entire keychain if necessary:
+
+```
+$ aws-jumpcloud remove --all
+
+All configuration profiles, temporary IAM sessions, and JumpCloud login
+credentials have been removed from your OS keychain.
+```
+
+
+## Advanced features
 
 ### Exporting credentials into your environment
 
@@ -125,6 +146,7 @@ If you use multi-factor authentication, the command needs to be a little more co
 aws-jumpcloud exec duff -- true && eval "$(aws-jumpcloud export duff)"
 ```
 
+
 ### Rotating credentials
 
 After a profile's temporary IAM credentials expire, `aws-jumpcloud` will automatically delete the credentials from its keychain. New temporary credentials will automatically be requested the next time you attempt to use that profile. However, you can also rotate the credentials at any time and request new credentials immediately.
@@ -137,24 +159,6 @@ Enter your JumpCloud multi-factor auth code: 788149
 Attempting SSO authentication to Amazon Web Services...
 
 AWS temporary session rotated; new session valid until Thu Nov 15 20:49:38 2018 UTC.
-```
-
-### Removing profiles
-
-You can remove a profile if you no longer need it:
-
-```
-$ aws-jumpcloud remove duff
-Profile duff and temporary IAM session removed.
-```
-
-And you can clear `aws-jumpcloud`'s entire keychain if necessary:
-
-```
-$ aws-jumpcloud remove --all
-
-All configuration profiles, temporary IAM sessions, and JumpCloud login
-credentials have been removed from your OS keychain.
 ```
 
 
