@@ -165,6 +165,7 @@ AWS temporary session rotated; new session valid until Thu Nov 15 20:49:38 2018 
 ## Developing
 
 ```
+$ python setup.py develop
 $ pip install -r test-requirements.txt
 $ pycodestyle *.py aws_jumpcloud/
 $ pylint -E *.py aws_jumpcloud/
