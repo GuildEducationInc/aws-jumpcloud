@@ -4,7 +4,7 @@ class AwsJumpcloud < Formula
   desc "aws-vault like tool for JumpCloud authentication"
   homepage "https://github.com/GuildEducationInc/aws-jumpcloud"
   url "https://github.com/GuildEducationInc/aws-jumpcloud/archive/2.0.0.tar.gz"
-  sha256 "9d3e67bed8db1fd429c57350784e52085dbf0c11ecd5d96ebcbe4c3920a22c74"
+  sha256 "d500b6115d1d32d60f6a29668961286414bbcf22d9d2550bbcf90bd49ea23d36"
   head "https://github.com/GuildEducationInc/aws-jumpcloud.git", :branch => 'master'
   depends_on "python"
 
