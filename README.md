@@ -67,6 +67,7 @@ $ aws-jumpcloud add duff
 Enter the JumpCloud SSO URL for duff: <url copied from the JumpCloud Console>
 Profile duff added.
 ```
+NOTE: various Guild applications require you to have profiles named `guild-dev` and `guild-prod`, linked with the JumpCloud URLs of the associated AWS accounts.
 
 ### Listing profiles
 
