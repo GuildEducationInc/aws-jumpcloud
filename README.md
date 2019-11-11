@@ -198,6 +198,20 @@ AWS temporary session rotated; new session valid until Thu Nov 15 20:49:38 2018 
 
 If the [1Password CLI](https://1password.com/downloads/command-line/) is installed, `aws-jumpcloud` will automatically use your JumpCloud credentials and MFA token from 1Password. The credentials must be stored in an item named `jumpcloud`
 
+To automatically rotate expired credentials for a given profile when you fire up
+your shell, add the following to your `.(bash|zsh|whatever)rc`
+
+```bash
+aws-jumpcloud-rotate() {
+  if [ "$(aws-jumpcloud is-expired $1)" = "1" ]; then
+    eval $(op signin guild_education)
+    aws-jumpcloud rotate $1
+  fi
+}
+
+aws-jumpcloud-rotate guild-dev
+```
+
 
 ## Developing
 
