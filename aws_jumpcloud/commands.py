@@ -15,6 +15,7 @@ from aws_jumpcloud.jumpcloud import JumpCloudUnexpectedStatus, JumpCloudMissingS
 from aws_jumpcloud.keyring import Keyring
 from aws_jumpcloud.profile import AssumedRole, Profile
 from aws_jumpcloud.saml import get_assertion_roles
+import aws_jumpcloud.onepassword as op
 
 _session = None
 
@@ -184,6 +185,44 @@ def _get_aws_session(profile_name):
     return session
 
 
+def _get_email():
+    if op.installed():
+        sys.stderr.write(f"1Password CLI found. Using email from item: {op.ITEM}\n")
+        email = op.get_email()
+
+        if email:
+            return email
+        else:
+            sys.stderr.write(f"1Password email not found for item: {op.ITEM}."
+                              "Falling back to user input.\n")
+            return _input_email()
+    else:
+        return _input_email()
+
+
+def _input_email():
+    return input("Enter your JumpCloud email address: ").strip()
+
+
+def _get_password():
+    if op.installed():
+        sys.stderr.write(f"1Password CLI found. Using password from item: {op.ITEM}\n")
+        passwd = op.get_password()
+
+        if passwd:
+            return passwd
+        else:
+            sys.stderr.write(f"1Password password not found for item: {op.ITEM}."
+                              "Falling back to user input.\n")
+            return _input_password()
+    else:
+        return _input_password()
+
+
+def _input_password():
+    return getpass.getpass("Enter your JumpCloud password: ").strip()
+
+
 def _login_to_jumpcloud(profile_name):
     # Returns a JumpCloudSession with the user logged in. If a session already
     # in the current process, it uses that; otherwise it creates a new one.
@@ -197,8 +236,8 @@ def _login_to_jumpcloud(profile_name):
     if email and password:
         sys.stderr.write("Using JumpCloud login details from your OS keychain.\n")
     elif sys.stdout.isatty():
-        email = input("Enter your JumpCloud email address: ").strip()
-        password = getpass.getpass("Enter your JumpCloud password: ").strip()
+        email = _get_email()
+        password = _get_password()
         keyring.store_jumpcloud_email(email)
         keyring.store_jumpcloud_password(password)
         sys.stderr.write("JumpCloud login details saved in your OS keychain.\n")

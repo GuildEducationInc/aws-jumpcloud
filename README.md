@@ -194,6 +194,10 @@ Attempting SSO authentication to Amazon Web Services...
 AWS temporary session rotated; new session valid until Thu Nov 15 20:49:38 2018 UTC.
 ```
 
+### 1Password support
+
+If the [1Password CLI](https://1password.com/downloads/command-line/) is installed, `aws-jumpcloud` will automatically use your JumpCloud credentials and MFA token from 1Password. The credentials must be stored in an item named `jumpcloud`
+
 
 ## Developing
 

@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup  # pylint: disable=E0401
 from requests import Session as HTTPSession
 
 from aws_jumpcloud.keyring import Keyring
+import aws_jumpcloud.onepassword as op
 
 
 class JumpCloudSession(object):
@@ -24,10 +25,27 @@ class JumpCloudSession(object):
             self._authenticate()
         except JumpCloudMFARequired as e:
             if sys.stdout.isatty():
-                otp = input("Enter your JumpCloud multi-factor auth code: ").strip()
+                otp = self._get_mfa()
                 self._authenticate(otp=otp)
             else:
                 raise e
+
+    def _get_mfa(self):
+        if op.installed:
+            sys.stderr.write(f"1Password CLI found. Using OTP from item: {op.ITEM}\n")
+            mfa = op.get_totp()
+
+            if mfa:
+                return mfa
+            else:
+                sys.stderr.write(f"1Password OTP not configured for item: {op.ITEM}."
+                                  "Falling back to user input.\n")
+                return _input_mfa()
+        else:
+            return _input_mfa()
+
+    def _input_mfa(self):
+        return input("Enter your JumpCloud multi-factor auth code: ").strip()
 
     def _authenticate(self, otp=None):
         assert(not self.logged_in)
@@ -119,7 +137,10 @@ class JumpCloudServerError(JumpCloudError):
 
 class JumpCloudAuthFailure(JumpCloudError):
     def __init__(self, resp=None):
-        message = "JumpCloud authentication failed. Check your username and password and try again."
+        message = """
+            JumpCloud authentication failed. Check your username and password and try again.
+            If you are authenticating with a MFA token, ensure you are not reusing a token.
+        """
         JumpCloudError.__init__(self, message, resp)
 
 
