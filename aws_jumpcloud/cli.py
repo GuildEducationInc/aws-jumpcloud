@@ -32,6 +32,7 @@ def _build_parser():
     _add_exec_command(subparsers)
     _add_export_command(subparsers)
     _add_rotate_command(subparsers)
+    _add_is_expired_command(subparsers)
     return parser
 
 
@@ -77,6 +78,13 @@ def _add_exec_command(p):
     parser_exec.add_argument("profile", help="name of the profile")
     parser_exec.add_argument("command", nargs="+")
     parser_exec.set_defaults(func=commands.exec_command)
+
+
+def _add_is_expired_command(p):
+    parser_export = p.add_parser(
+        "is-expired", help="returns 1 if the session is expired for this profile")
+    parser_export.add_argument("profile", help="name of the profile")
+    parser_export.set_defaults(func=commands.is_expired)
 
 
 def _add_export_command(p):

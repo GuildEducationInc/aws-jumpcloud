@@ -79,6 +79,14 @@ def add_profile(args):
     print(f"Profile \"{args.profile}\" added.")
 
 
+def is_expired(args):
+    keyring = Keyring()
+    sess = keyring.get_session(args.profile)
+
+    if sess.expired():
+        print(1)
+
+
 def remove_profile(args):
     if args.all:
         _remove_all_profiles(args)
@@ -185,6 +193,14 @@ def _get_aws_session(profile_name):
     return session
 
 
+def _input_email():
+    return input("Enter your JumpCloud email address: ").strip()
+
+
+def _input_password():
+    return getpass.getpass("Enter your JumpCloud password: ").strip()
+
+
 def _get_email():
     if op.installed():
         sys.stderr.write(f"1Password CLI found. Using email from item: {op.ITEM}\n")
@@ -193,15 +209,11 @@ def _get_email():
         if email:
             return email
         else:
-            sys.stderr.write(f"1Password email not found for item: {op.ITEM}."
+            sys.stderr.write(f"1Password email not found for item: {op.ITEM}. "
                               "Falling back to user input.\n")
             return _input_email()
     else:
         return _input_email()
-
-
-def _input_email():
-    return input("Enter your JumpCloud email address: ").strip()
 
 
 def _get_password():
@@ -212,15 +224,11 @@ def _get_password():
         if passwd:
             return passwd
         else:
-            sys.stderr.write(f"1Password password not found for item: {op.ITEM}."
+            sys.stderr.write(f"1Password password not found for item: {op.ITEM}. "
                               "Falling back to user input.\n")
             return _input_password()
     else:
         return _input_password()
-
-
-def _input_password():
-    return getpass.getpass("Enter your JumpCloud password: ").strip()
 
 
 def _login_to_jumpcloud(profile_name):

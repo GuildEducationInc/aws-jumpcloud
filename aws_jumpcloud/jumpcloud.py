@@ -38,11 +38,11 @@ class JumpCloudSession(object):
             if mfa:
                 return mfa
             else:
-                sys.stderr.write(f"1Password OTP not configured for item: {op.ITEM}."
+                sys.stderr.write(f"1Password OTP not configured for item: {op.ITEM}. "
                                   "Falling back to user input.\n")
-                return _input_mfa()
+                return self._input_mfa()
         else:
-            return _input_mfa()
+            return self._input_mfa()
 
     def _input_mfa(self):
         return input("Enter your JumpCloud multi-factor auth code: ").strip()
