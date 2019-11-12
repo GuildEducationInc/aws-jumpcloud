@@ -203,13 +203,20 @@ your shell, add the following to your `.(bash|zsh|whatever)rc`
 
 ```bash
 aws-jumpcloud-rotate() {
-  if [ "$(aws-jumpcloud is-expired $1)" = "1" ]; then
+  if [ "$(aws-jumpcloud is-active $1)" != "1" ]; then
     eval $(op signin guild_education)
     aws-jumpcloud rotate $1
   fi
 }
 
 aws-jumpcloud-rotate guild-dev
+```
+
+To manually rotate credentials from your terminal:
+
+```bash
+eval $(op signin guild_education)
+aws-jumpcloud rotate guild-dev
 ```
 
 
