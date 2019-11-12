@@ -79,11 +79,11 @@ def add_profile(args):
     print(f"Profile \"{args.profile}\" added.")
 
 
-def is_expired(args):
+def is_active(args):
     keyring = Keyring()
     sess = keyring.get_session(args.profile)
 
-    if sess.expired():
+    if sess and not sess.expired():
         print(1)
 
 
