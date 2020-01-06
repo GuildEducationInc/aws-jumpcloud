@@ -364,7 +364,7 @@ def _format_profile_rows(profiles, sessions):
         if p.role_to_assume:
             aws_role = p.role_to_assume.aws_role
         else:
-            aws_role = p.aws_role
+            aws_role = p.aws_role or "<unknown>"
         if p.name in sessions:
             expires_at = sessions[p.name].expires_at.astimezone().strftime("%c %Z")
         else:
