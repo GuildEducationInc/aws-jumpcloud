@@ -203,22 +203,23 @@ your shell, add the following to your `.(bash|zsh|whatever)rc`
 
 ```bash
 aws-jumpcloud-rotate() {
-  if [ "$(aws-jumpcloud is-active $1)" != "1" ]; then
-    eval $(op signin guild_education)
+  if [ "$(aws-jumpcloud is-expired $1)" = "1" ]; then
+    eval $(op signin duff-beer)
     aws-jumpcloud rotate $1
   fi
 }
 
-aws-jumpcloud-rotate guild-dev
+aws-jumpcloud-rotate duff
 ```
+
+The "duff-beer" refers to the [subdomain](https://support.1password.com/command-line/) of your 1Password acount (e.g., the "duff-beer" of your "duff-beer.1password.com" 1Password account).
 
 To manually rotate credentials from your terminal:
 
 ```bash
-eval $(op signin guild_education)
-aws-jumpcloud rotate guild-dev
+eval $(op signin duff-beer)
+aws-jumpcloud rotate duff
 ```
-
 
 ## Developing
 
