@@ -213,6 +213,7 @@ aws-jumpcloud-rotate duff
 ```
 
 The "duff-beer" refers to the [subdomain](https://support.1password.com/command-line/) of your 1Password acount (e.g., the "duff-beer" of your "duff-beer.1password.com" 1Password account).
+You may `export OP_SUBDOMAIN=duff-beer` in your `.(bash|zsh|whatever)rc` to have `aws-jumpcloud` automatically refresh expired 1Password CLI sessions.
 
 To manually rotate credentials from your terminal:
 
@@ -224,8 +225,8 @@ aws-jumpcloud rotate duff
 ## Developing
 
 ```
-$ python setup.py develop
-$ pip install -r test-requirements.txt
+$ python3 setup.py develop
+$ pip3 install -r test-requirements.txt
 $ pycodestyle *.py aws_jumpcloud/
 $ pylint -E *.py aws_jumpcloud/
 ```
