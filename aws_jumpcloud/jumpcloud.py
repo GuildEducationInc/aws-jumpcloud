@@ -31,7 +31,7 @@ class JumpCloudSession(object):
                 raise e
 
     def _get_mfa(self):
-        if op.installed:
+        if op.installed():
             sys.stderr.write(f"1Password CLI found. Using OTP from item: {op.ITEM}\n")
             mfa = op.get_totp()
 
