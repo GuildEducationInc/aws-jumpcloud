@@ -8,7 +8,7 @@ ITEM = "jumpcloud"
 
 
 def installed():
-    hasop = which("op") is not None
+    hasop = which("op") is not None and which("op") is not True
     if hasop:
         if os.getenv('OP_SUBDOMAIN') and subprocess.call("op get account", shell=True):  # returns truthy non-zero exit code if no active op CLI session
             subprocess.check_call("eval $(op signin $OP_SUBDOMAIN)", shell=True)
