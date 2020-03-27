@@ -4,13 +4,14 @@ from aws_jumpcloud.aws import build_arn, parse_arn
 
 
 class Profile(object):
-    def __init__(self, name, jumpcloud_url, role_to_assume=None):
+    def __init__(self, name, jumpcloud_url, role_to_assume=None, override_session_duration=None):
         self.name = name
         self.jumpcloud_url = jumpcloud_url
         self.aws_account_id = None
         self.aws_role = None
         self.aws_account_alias = None
         self.role_to_assume = role_to_assume
+        self.override_session_duration = override_session_duration
 
     @property
     def role_arn(self):
@@ -24,7 +25,9 @@ class Profile(object):
                            "aws_account_id": self.aws_account_id,
                            "aws_account_alias": self.aws_account_alias,
                            "aws_role": self.aws_role,
-                           "role_to_assume": self.role_to_assume.dumps() if self.role_to_assume else None})
+                           "role_to_assume": self.role_to_assume.dumps() if self.role_to_assume else None,
+                           "override_session_duration": self.override_session_duration if
+                            self.override_session_duration else None})
 
     @classmethod
     def loads(cls, json_string):
@@ -35,6 +38,8 @@ class Profile(object):
         p.aws_account_alias = data['aws_account_alias']
         if data.get('role_to_assume') is not None:
             p.role_to_assume = AssumedRole.loads(data['role_to_assume'])
+        if data.get('override_session_duration') is not None:
+            p.override_session_duration = int(data['override_session_duration'])
         return p
 
 

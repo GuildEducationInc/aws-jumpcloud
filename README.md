@@ -180,6 +180,17 @@ Profile duff-deployer added.
 The AWS IAM User Guide contains [more information about assuming IAM roles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use.html).
 
 
+### Adding a profile with custom session duration
+
+To manually configure the session duration in seconds (not via SAML, nor code's default 1 hour), use the `--session-duration` parameter:
+
+```
+$ aws-jumpcloud add --session-duration 300 duff-deployer
+Enter the JumpCloud SSO URL for duff-deployer: <url copied from the JumpCloud Console>
+Profile duff-deployer added.
+```
+
+
 ### Rotating credentials
 
 After a profile's temporary IAM credentials expire, `aws-jumpcloud` will automatically delete the credentials from its keychain. New temporary credentials will automatically be requested the next time you attempt to use that profile. However, you can also rotate the credentials at any time and request new credentials immediately.

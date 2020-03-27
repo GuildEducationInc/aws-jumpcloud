@@ -59,6 +59,8 @@ def _add_add_command(p):
                             dest="role_to_assume", metavar="ROLE")
     parser_add.add_argument("--external-id", help="External ID to provide when assuming a role after login",
                             metavar="ID")
+    parser_add.add_argument("--session-duration", help="override SAML's session duration (default 1 hour)",
+                            dest="duration", metavar="DURATION")
     parser_add.set_defaults(func=commands.add_profile)
 
 

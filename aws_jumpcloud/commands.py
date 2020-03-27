@@ -74,7 +74,11 @@ def add_profile(args):
                                        external_id=args.external_id)
     else:
         assumed_role = None
-    profile = Profile(args.profile, jumpcloud_url, assumed_role)
+    if args.duration:
+        override_session_duration = args.duration
+    else:
+        override_session_duration = None
+    profile = Profile(args.profile, jumpcloud_url, assumed_role, override_session_duration)
     keyring.store_profile(profile)
     print(f"Profile \"{args.profile}\" added.")
 
@@ -312,7 +316,7 @@ def _login_to_aws(keyring, profile):
         profile.aws_role = r.aws_role
         keyring.store_profile(profile)
 
-    session = assume_role_with_saml(role, saml_assertion)
+    session = assume_role_with_saml(role, saml_assertion, profile.override_session_duration)
 
     # Update the AWS account alias on each login. The alias refers to the
     # account used to login, not any assumed role (which happens below).

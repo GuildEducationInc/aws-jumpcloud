@@ -63,9 +63,9 @@ class AWSSession(object):
                           expires_at=sts_resp['Credentials']['Expiration'])
 
 
-def assume_role_with_saml(saml_role, saml_assertion_xml):
+def assume_role_with_saml(saml_role, saml_assertion_xml, override_session_duration=None):
     client = boto3.client('sts')
-    duration = get_assertion_duration(saml_assertion_xml) or DEFAULT_DURATION
+    duration = override_session_duration or get_assertion_duration(saml_assertion_xml) or DEFAULT_DURATION
     sts_resp = client.assume_role_with_saml(
         RoleArn=saml_role.role_arn,
         PrincipalArn=saml_role.principal_arn,
