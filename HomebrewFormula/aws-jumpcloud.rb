@@ -2,10 +2,10 @@ class AwsJumpcloud < Formula
   include Language::Python::Virtualenv
 
   desc "aws-vault like tool for JumpCloud authentication"
-  homepage "https://github.com/GuildEducationInc/aws-jumpcloud"
-  url "https://github.com/GuildEducationInc/aws-jumpcloud/archive/2.1.5.tar.gz"
+  homepage "https://github.com/Tomer20/aws-jumpcloud"
+  url "https://github.com/Tomer20/aws-jumpcloud/archive/2.1.6.tar.gz"
   sha256 "aa4862780070837f7ca986277fc4b96ba8722c14392502ba1e696f83a88c30bc"
-  head "https://github.com/GuildEducationInc/aws-jumpcloud.git", :branch => 'master'
+  head "https://github.com/Tomer20/aws-jumpcloud.git", :branch => 'master'
   depends_on "python"
 
   def install
@@ -20,7 +20,7 @@ class AwsJumpcloud < Formula
 
     Check out the README to look into migrating existing ~/.aws credentials:
 
-      https://github.com/GuildEducationInc/aws-jumpcloud#migrating-from-aws-credentials
+      https://github.com/Tomer20/aws-jumpcloud#migrating-from-aws-credentials
 
   EOS
   end
