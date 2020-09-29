@@ -56,7 +56,7 @@ class JumpCloudSession(object):
         if otp is not None:
             data['otp'] = otp
         auth_resp = self.http.post("https://console.jumpcloud.com/userconsole/auth",
-                                   headers=headers, json=data, allow_redirects=False,
+                                   headers=headers, json=data, allow_redirects=True,
                                    timeout=JumpCloudSession.HTTP_TIMEOUT)
         if auth_resp.status_code == 200:
             self.logged_in = True
