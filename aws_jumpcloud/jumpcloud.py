@@ -53,11 +53,16 @@ class JumpCloudSession(object):
                    'X-Requested-With': 'XMLHttpRequest',
                    'X-Xsrftoken': self._get_xsrf_token()}
         data = {"email": self.email, "password": self.password}
+
         if otp is not None:
             data['otp'] = otp
-        auth_resp = self.http.post("https://console.jumpcloud.com/userconsole/auth",
-                                   headers=headers, json=data, allow_redirects=True,
-                                   timeout=JumpCloudSession.HTTP_TIMEOUT)
+
+        auth_resp = self.http.post(
+            "https://console.jumpcloud.com/userconsole/auth",
+            headers=headers, json=data, allow_redirects=False,
+            timeout=JumpCloudSession.HTTP_TIMEOUT
+        )
+
         if auth_resp.status_code == 200:
             self.logged_in = True
             Keyring().store_jumpcloud_timestamp(datetime.now(tz=timezone.utc))
@@ -82,7 +87,7 @@ class JumpCloudSession(object):
 
     def _is_mfa_missing(self, auth_resp, otp):
         return auth_resp.status_code == 302 and otp is None and \
-            "error=4014" in auth_resp.headers['Location']
+            "/login" in auth_resp.headers['Location']
 
     def _is_mfa_failure(self, auth_resp, otp):
         try:
