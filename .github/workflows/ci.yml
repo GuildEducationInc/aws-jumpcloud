@@ -1,0 +1,29 @@
+---
+name: Lint and CI
+on:
+  [push]
+jobs:
+  lint:
+    strategy:
+      max-parallel: 4
+      matrix:
+        config:
+          - os: ubuntu-latest
+            python-version: '3.8'
+    runs-on: ${{ matrix.config.os }}
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Set up Python for ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.config.python-version }}
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt
+          python3 -m pip install -r test-requirements.txt
+      - name: Run linter
+        run: |
+          black --check setup.py
+          black --check aws_jumpcloud/*.py

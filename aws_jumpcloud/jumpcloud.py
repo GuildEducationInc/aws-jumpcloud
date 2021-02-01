@@ -38,8 +38,10 @@ class JumpCloudSession(object):
             if mfa:
                 return mfa
             else:
-                sys.stderr.write(f"1Password OTP not configured for item: {op.ITEM}. "
-                                  "Falling back to user input.\n")
+                sys.stderr.write(
+                    f"1Password OTP not configured for item: {op.ITEM}. "
+                    "Falling back to user input.\n"
+                )
                 return self._input_mfa()
         else:
             return self._input_mfa()
@@ -48,19 +50,23 @@ class JumpCloudSession(object):
         return input("Enter your JumpCloud multi-factor auth code: ").strip()
 
     def _authenticate(self, otp=None):
-        assert(not self.logged_in)
-        headers = {'Content-Type': 'application/json',
-                   'X-Requested-With': 'XMLHttpRequest',
-                   'X-Xsrftoken': self._get_xsrf_token()}
+        assert not self.logged_in
+        headers = {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-Xsrftoken": self._get_xsrf_token(),
+        }
         data = {"email": self.email, "password": self.password}
 
         if otp is not None:
-            data['otp'] = otp
+            data["otp"] = otp
 
         auth_resp = self.http.post(
             "https://console.jumpcloud.com/userconsole/auth",
-            headers=headers, json=data, allow_redirects=False,
-            timeout=JumpCloudSession.HTTP_TIMEOUT
+            headers=headers,
+            json=data,
+            allow_redirects=False,
+            timeout=JumpCloudSession.HTTP_TIMEOUT,
         )
 
         if auth_resp.status_code == 200:
@@ -70,7 +76,7 @@ class JumpCloudSession(object):
             raise self._auth_failure_exception(auth_resp, otp)
 
     def _auth_failure_exception(self, auth_resp, otp):
-        assert(auth_resp.status_code != 200)
+        assert auth_resp.status_code != 200
 
         if self._is_mfa_missing(auth_resp, otp):
             exception = JumpCloudMFARequired(auth_resp)
@@ -86,27 +92,35 @@ class JumpCloudSession(object):
         return exception
 
     def _is_mfa_missing(self, auth_resp, otp):
-        return auth_resp.status_code == 302 and otp is None and \
-            "/login" in auth_resp.headers['Location']
+        return (
+            auth_resp.status_code == 302
+            and otp is None
+            and "/login" in auth_resp.headers["Location"]
+        )
 
     def _is_mfa_failure(self, auth_resp, otp):
         try:
             error_msg = auth_resp.json().get("error", "")
         except JSONDecodeError:
             error_msg = ""
-        return auth_resp.status_code == 401 and otp is not None and \
-            "multifactor" in error_msg
+        return (
+            auth_resp.status_code == 401
+            and otp is not None
+            and "multifactor" in error_msg
+        )
 
     def _get_xsrf_token(self):
         if self.xsrf_token is None:
-            xsrf_resp = self.http.get("https://console.jumpcloud.com/userconsole/xsrf",
-                                      timeout=JumpCloudSession.HTTP_TIMEOUT)
-            assert(xsrf_resp.status_code == 200)
+            xsrf_resp = self.http.get(
+                "https://console.jumpcloud.com/userconsole/xsrf",
+                timeout=JumpCloudSession.HTTP_TIMEOUT,
+            )
+            assert xsrf_resp.status_code == 200
             self.xsrf_token = xsrf_resp.json().get("xsrf")
         return self.xsrf_token
 
     def get_aws_saml_assertion(self, profile):
-        assert(self.logged_in)
+        assert self.logged_in
         aws_resp = self.http.get(profile.jumpcloud_url)
         if aws_resp.status_code != 200:
             raise JumpCloudUnexpectedStatus(aws_resp)
@@ -116,9 +130,9 @@ class JumpCloudSession(object):
 
     def _extract_saml_response(self, html):
         soup = BeautifulSoup(html, "lxml")
-        tag = soup.find("input", attrs={'name': "SAMLResponse"})
-        assert(tag is not None)
-        saml_response_b64 = tag.attrs['value']
+        tag = soup.find("input", attrs={"name": "SAMLResponse"})
+        assert tag is not None
+        saml_response_b64 = tag.attrs["value"]
         saml_response = base64.b64decode(saml_response_b64)
         return saml_response
 
@@ -157,13 +171,16 @@ class JumpCloudMFARequired(JumpCloudError):
 
 class JumpCloudMFAFailure(JumpCloudError):
     def __init__(self, resp):
-        message = "Multi-factor authentication failed. Check your MFA token and try again."
+        message = (
+            "Multi-factor authentication failed. Check your MFA token and try again."
+        )
         JumpCloudError.__init__(self, message, resp)
 
 
 class JumpCloudUnexpectedStatus(JumpCloudError):
     """Indicates a response that we weren't expecting, i.e. that JumpCloud
     changed their auth workflow or we didn't reverse-engineer it properly."""
+
     def __init__(self, resp):
         message = f"JumpCloud returned unexpected HTTP {resp.status_code} response"
         JumpCloudError.__init__(self, message, resp)
@@ -173,6 +190,7 @@ class JumpCloudMissingSAMLResponse(JumpCloudError):
     """Indicates that the SSO URL did not include the expected SAMLResponse
     field. Either the profile contains an incorrect URL, or JumpCloud changed
     their SSO workflow."""
+
     def __init__(self, resp):
-        message = "JumpCloud's SSO response did not contain the expected \"SAMLResponse\" field."
+        message = 'JumpCloud\'s SSO response did not contain the expected "SAMLResponse" field.'
         JumpCloudError.__init__(self, message, resp)

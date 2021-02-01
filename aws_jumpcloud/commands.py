@@ -9,9 +9,16 @@ from subprocess import PIPE
 from aws_jumpcloud.aws import assume_role, assume_role_with_saml
 from aws_jumpcloud.aws import get_account_alias, get_role_session_name
 from aws_jumpcloud.aws import is_arn, parse_arn
-from aws_jumpcloud.jumpcloud import JumpCloudSession, JumpCloudError, JumpCloudAuthFailure
+from aws_jumpcloud.jumpcloud import (
+    JumpCloudSession,
+    JumpCloudError,
+    JumpCloudAuthFailure,
+)
 from aws_jumpcloud.jumpcloud import JumpCloudMFARequired, JumpCloudServerError
-from aws_jumpcloud.jumpcloud import JumpCloudUnexpectedStatus, JumpCloudMissingSAMLResponse
+from aws_jumpcloud.jumpcloud import (
+    JumpCloudUnexpectedStatus,
+    JumpCloudMissingSAMLResponse,
+)
 from aws_jumpcloud.keyring import Keyring
 from aws_jumpcloud.profile import AssumedRole, Profile
 from aws_jumpcloud.saml import get_assertion_roles
@@ -28,7 +35,9 @@ def get_info(args):
     ts = keyring.get_jumpcloud_timestamp()
     print(f"JumpCloud email: {email or '<not stored>'}")
     print(f"JumpCloud password: {'******** (hidden)' if password else '<not stored>'}")
-    print(f"Last JumpCloud authentication: {ts.astimezone().strftime('%c %Z') if ts else '<never>'}")
+    print(
+        f"Last JumpCloud authentication: {ts.astimezone().strftime('%c %Z') if ts else '<never>'}"
+    )
 
 
 def list_profiles(args):
@@ -37,12 +46,16 @@ def list_profiles(args):
     sessions = keyring.get_all_sessions()
     if len(profiles) == 0:
         print("")
-        print("No profiles found. Use \"aws-jumpcloud add <profile>\" to store a new profile.")
+        print(
+            'No profiles found. Use "aws-jumpcloud add <profile>" to store a new profile.'
+        )
         sys.exit(0)
 
     print("")
-    _print_columns(headers=["Profile", "AWS Account", "AWS Role", "IAM session expires"],
-                   rows=_format_profile_rows(profiles, sessions))
+    _print_columns(
+        headers=["Profile", "AWS Account", "AWS Role", "IAM session expires"],
+        rows=_format_profile_rows(profiles, sessions),
+    )
 
 
 def add_profile(args):
@@ -52,31 +65,41 @@ def add_profile(args):
 
     keyring = Keyring()
     if keyring.get_profile(args.profile):
-        _print_error(f"Error: Profile \"{args.profile}\" already exists. If you want to modify "
-                     "the profile, remove the profile and add it again.")
+        _print_error(
+            f'Error: Profile "{args.profile}" already exists. If you want to modify '
+            "the profile, remove the profile and add it again."
+        )
         sys.exit(1)
 
-    jumpcloud_url = args.url or input(f"Enter the JumpCloud SSO URL for \"{args.profile}\": ")
+    jumpcloud_url = args.url or input(
+        f'Enter the JumpCloud SSO URL for "{args.profile}": '
+    )
     jumpcloud_url = jumpcloud_url.strip()
     if not jumpcloud_url.startswith("https://sso.jumpcloud.com/saml2/"):
-        _print_error("Error: That's not a valid JumpCloud SSO URL. SSO URLs must "
-                     "start with \"https://sso.jumpcloud.com/saml2/\".")
+        _print_error(
+            "Error: That's not a valid JumpCloud SSO URL. SSO URLs must "
+            'start with "https://sso.jumpcloud.com/saml2/".'
+        )
         sys.exit(1)
     if args.role_to_assume:
         if is_arn(args.role_to_assume):
             arn_parts = parse_arn(args.role_to_assume)
-            assumed_role = AssumedRole(aws_account_id=arn_parts.aws_account_id,
-                                       aws_role=arn_parts.aws_role,
-                                       external_id=args.external_id)
+            assumed_role = AssumedRole(
+                aws_account_id=arn_parts.aws_account_id,
+                aws_role=arn_parts.aws_role,
+                external_id=args.external_id,
+            )
         else:
-            assumed_role = AssumedRole(aws_account_id=None,
-                                       aws_role=args.role_to_assume,
-                                       external_id=args.external_id)
+            assumed_role = AssumedRole(
+                aws_account_id=None,
+                aws_role=args.role_to_assume,
+                external_id=args.external_id,
+            )
     else:
         assumed_role = None
     profile = Profile(args.profile, jumpcloud_url, assumed_role)
     keyring.store_profile(profile)
-    print(f"Profile \"{args.profile}\" added.")
+    print(f'Profile "{args.profile}" added.')
 
 
 def is_active(args):
@@ -108,7 +131,7 @@ def export_vars(args):
     # Print export statements for a profile's AWS credentials
     session = _get_aws_session(args.profile)
     for (name, value) in session.get_environment_vars().items():
-        print(f"export {name}=\"{value}\"")
+        print(f'export {name}="{value}"')
 
 
 def rotate_session(args):
@@ -121,15 +144,15 @@ def rotate_session(args):
 def _remove_single_profile(args):
     keyring = Keyring()
     if not keyring.get_profile(args.profile):
-        print(f"Profile \"{args.profile}\" not found, nothing to do.")
+        print(f'Profile "{args.profile}" not found, nothing to do.')
         return
     has_session = not not keyring.get_session(args.profile)
     keyring.delete_session(args.profile)
     keyring.delete_profile(args.profile)
     if has_session:
-        print(f"Profile \"{args.profile}\" and temporary IAM session removed.")
+        print(f'Profile "{args.profile}" and temporary IAM session removed.')
     else:
-        print(f"Profile \"{args.profile}\" removed.")
+        print(f'Profile "{args.profile}" removed.')
 
 
 def _remove_all_profiles(args):
@@ -143,22 +166,22 @@ def _remove_all_profiles(args):
 def _rotate_single_session(args, profile_name=None):
     if not profile_name:
         profile_name = args.profile
-    assert(profile_name is not None)
+    assert profile_name is not None
 
     keyring = Keyring()
     profile = keyring.get_profile(profile_name)
     if not profile:
-        sys.stderr.write(f"Error: Profile \"{profile_name}\" not found.\n")
+        sys.stderr.write(f'Error: Profile "{profile_name}" not found.\n')
         sys.exit(1)
 
     _login_to_jumpcloud(profile_name)
 
     keyring.delete_session(profile_name)
-    print(f"Temporary IAM session for \"{profile_name}\" removed.")
+    print(f'Temporary IAM session for "{profile_name}" removed.')
 
     _login_to_aws(keyring, profile)
     session = keyring.get_session(profile_name)
-    expires_at = session.expires_at.strftime('%c %Z')
+    expires_at = session.expires_at.strftime("%c %Z")
     print(f"AWS temporary session rotated; new session valid until {expires_at}.\n")
 
 
@@ -167,10 +190,12 @@ def _rotate_all_sessions(args):
     profiles = keyring.get_all_profiles()
     if len(profiles) == 0:
         print("")
-        print("No profiles found. Use \"aws-jumpcloud add <profile>\" to store a new profile.")
+        print(
+            'No profiles found. Use "aws-jumpcloud add <profile>" to store a new profile.'
+        )
         sys.exit(0)
 
-    _login_to_jumpcloud('--all')
+    _login_to_jumpcloud("--all")
     print("")
 
     for profile in profiles.values():
@@ -184,7 +209,9 @@ def _get_aws_session(profile_name):
     keyring = Keyring()
     profile = keyring.get_profile(profile_name)
     if not profile:
-        _print_error(f"Error: Profile \"{profile_name}\" not found; you must add it first.")
+        _print_error(
+            f'Error: Profile "{profile_name}" not found; you must add it first.'
+        )
         sys.exit(1)
     session = keyring.get_session(profile_name)
     if not session:
@@ -209,8 +236,10 @@ def _get_email():
         if email:
             return email
         else:
-            sys.stderr.write(f"1Password email not found for item: {op.ITEM}. "
-                              "Falling back to user input.\n")
+            sys.stderr.write(
+                f"1Password email not found for item: {op.ITEM}. "
+                "Falling back to user input.\n"
+            )
             return _input_email()
     else:
         return _input_email()
@@ -224,8 +253,10 @@ def _get_password():
         if passwd:
             return passwd
         else:
-            sys.stderr.write(f"1Password password not found for item: {op.ITEM}. "
-                              "Falling back to user input.\n")
+            sys.stderr.write(
+                f"1Password password not found for item: {op.ITEM}. "
+                "Falling back to user input.\n"
+            )
             return _input_password()
     else:
         return _input_password()
@@ -250,9 +281,11 @@ def _login_to_jumpcloud(profile_name):
         keyring.store_jumpcloud_password(password)
         sys.stderr.write("JumpCloud login details saved in your OS keychain.\n")
     else:
-        _print_error("Error: JumpCloud login details not found in your OS keychain. "
-                     f"Run \"{_get_program_name()} rotate {profile_name}\" interactively "
-                     "to store your credentials in the keychain, then try again.")
+        _print_error(
+            "Error: JumpCloud login details not found in your OS keychain. "
+            f'Run "{_get_program_name()} rotate {profile_name}" interactively '
+            "to store your credentials in the keychain, then try again."
+        )
         sys.exit(1)
 
     session = JumpCloudSession(email, password)
@@ -264,12 +297,18 @@ def _login_to_jumpcloud(profile_name):
         if isinstance(e, JumpCloudAuthFailure):
             keyring.store_jumpcloud_email(None)
             keyring.store_jumpcloud_password(None)
-            _print_error("- You will be prompted for your username and password the next time you try.")
+            _print_error(
+                "- You will be prompted for your username and password the next time you try."
+            )
         elif isinstance(e, JumpCloudMFARequired):
-            _print_error(f"Run \"{_get_program_name()} rotate {profile_name}\" interactively to "
-                         "refresh the temporary credentials in your OS keychain, then try again.")
+            _print_error(
+                f'Run "{_get_program_name()} rotate {profile_name}" interactively to '
+                "refresh the temporary credentials in your OS keychain, then try again."
+            )
         elif isinstance(e, JumpCloudServerError):
-            _print_error(f"- JumpCloud error message: {e.jumpcloud_error_message or e.response.text}")
+            _print_error(
+                f"- JumpCloud error message: {e.jumpcloud_error_message or e.response.text}"
+            )
         sys.exit(1)
 
     _session = session
@@ -286,21 +325,25 @@ def _login_to_aws(keyring, profile):
         sys.stderr.write("\n")
         _print_error(f"Error: {e.message}")
         if isinstance(e, JumpCloudServerError):
-            _print_error(f"- JumpCloud error message: {e.jumpcloud_error_message or e.response.text}")
+            _print_error(
+                f"- JumpCloud error message: {e.jumpcloud_error_message or e.response.text}"
+            )
         elif isinstance(e, JumpCloudMissingSAMLResponse):
             sys.stderr.write("\n")
-            _print_error("You may have been removed from the Single-Sign On Application for the profile "
-                         f"\"{profile.name}\", or its URL may be be incorrect. You can check the URL by "
-                         "visiting the JumpCloud Console in your web browser and confirming that one of "
-                         f"the Single Sign-On Applications has the URL \"{profile.jumpcloud_url}\". If "
-                         "the URL is correct, aws-jumpcloud may need to be updated.")
+            _print_error(
+                "You may have been removed from the Single-Sign On Application for the profile "
+                f'"{profile.name}", or its URL may be be incorrect. You can check the URL by '
+                "visiting the JumpCloud Console in your web browser and confirming that one of "
+                f'the Single Sign-On Applications has the URL "{profile.jumpcloud_url}". If '
+                "the URL is correct, aws-jumpcloud may need to be updated."
+            )
         sys.exit(1)
     roles = get_assertion_roles(saml_assertion)
 
     # Warning: It's a valid JumpCloud configuration to present more than one
     # role in the assertion, but we don't use that feature right now. We
     # should handle that situation properly at some point.
-    assert(len(roles) == 1)
+    assert len(roles) == 1
     role = roles[0]
 
     # Update the AWS account ID and role name if they've changed

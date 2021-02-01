@@ -10,9 +10,11 @@ ITEM = "jumpcloud"
 def installed():
     hasop = which("op") is not None and which("op") is not True
     if hasop:
-        if os.getenv('OP_SUBDOMAIN') and subprocess.call("op get account", shell=True):  # returns truthy non-zero exit code if no active op CLI session
+        if os.getenv("OP_SUBDOMAIN") and subprocess.call(
+            "op get account", shell=True
+        ):  # returns truthy non-zero exit code if no active op CLI session
             subprocess.check_call("eval $(op signin $OP_SUBDOMAIN)", shell=True)
-        if not os.getenv('OP_SUBDOMAIN'):
+        if not os.getenv("OP_SUBDOMAIN"):
             raise OnePasswordNotSignedIn()
     return hasop
 
@@ -35,8 +37,10 @@ def _get_field(field):
     if not item:
         return None
 
-    fields = item['details']['fields']
-    return next((item.get('value') for item in fields if item.get('name') == field), None)
+    fields = item["details"]["fields"]
+    return next(
+        (item.get("value") for item in fields if item.get("name") == field), None
+    )
 
 
 def _get_item():
@@ -53,7 +57,12 @@ def get_totp():
 
 
 def _cmd(cmd):
-    return subprocess.check_output(f'op {cmd}', shell=True).decode(sys.stdout.encoding).strip()
+    return (
+        subprocess.check_output(f"op {cmd}", shell=True)
+        .decode(sys.stdout.encoding)
+        .strip()
+    )
+
 
 class OnePasswordNotSignedIn(Exception):
     def __init__(self):

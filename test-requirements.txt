@@ -1,5 +1,6 @@
 # These packages are for testing/linting. Third-party packages required for
 # execution are defined in setup.py.
 
-pycodestyle
-pylint
+black
+pex
+wheel

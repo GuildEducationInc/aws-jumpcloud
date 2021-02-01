@@ -1,0 +1,5 @@
+BeautifulSoup4
+boto3
+keyring
+lxml
+requests

@@ -1,0 +1,73 @@
+---
+name: "Build and Release"
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    strategy:
+      max-parallel: 4
+      matrix:
+        config:
+          - os: macos-latest
+            os-friendly: macos
+            python-version: '3.8'
+          - os: ubuntu-latest
+            os-friendly: ubuntu
+            python-version: '3.8'
+    runs-on: ${{ matrix.config.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: Set up Python for ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.config.python-version }}
+      - name: get/set version
+        id: aws-jumpcloud-version
+        run: |  
+          AWS_JUMPCLOUD_VERSION=$(python3 -c "from aws_jumpcloud.version import __VERSION__; print(__VERSION__)" -i aws_jumpcloud/version.py)
+          echo "::set-output name=AWS_JUMPCLOUD_VERSION::${AWS_JUMPCLOUD_VERSION}"
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt
+          python3 -m pip install -r test-requirements.txt
+          python3 setup.py sdist bdist_wheel
+          pex --python-shebang='/usr/bin/env python3' --interpreter-constraint="CPython>=3,<4" -f dist aws-jumpcloud -e aws_jumpcloud.cli:main -o dist/aws_jumpcloud-${{ matrix.config.os-friendly }}-${{ steps.aws-jumpcloud-version.outputs.AWS_JUMPCLOUD_VERSION }}.pex
+      - uses: actions/upload-artifact@v2
+        with:
+          name: aws-jumpcloud-artifacts
+          path: dist/*
+  release:
+      needs: build
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/download-artifact@v2
+          with:
+            name: aws-jumpcloud-artifacts
+            path: dist/*
+        - name: Release
+          uses: "marvinpinto/action-automatic-releases@latest"
+          with:
+            repo_token: "${{ secrets.GITHUB_TOKEN }}"
+            prerelease: false
+            files: |
+              LICENSE
+              dist/*
+        - uses: actions/checkout@v1
+        - name: Setup SSH
+          uses: MrSquaare/ssh-setup-action@v1
+          with:
+            host: github.com
+            private-key: ${{ secrets.AWS_JUMPCLOUD_DEPLOY_KEY }}
+        - name: Release Homebrew Formula
+          uses: ryanjfrizzell/update-homebrew-action@v1.0.4
+          if: ${{ success() }}
+          with:
+            packageName: 'aws-jumpcloud'
+            templatePath: 'HomebrewFormula/aws-jumpcloud.rb'
+            tapRepo: 'CirrusMD/homebrew-aws-jumpcloud'
+            srcRepo: 'CirrusMD/aws-jumpcloud'
+            authToken: ${{ secrets.AWS_JUMPCLOUD_GH_TOKEN }}

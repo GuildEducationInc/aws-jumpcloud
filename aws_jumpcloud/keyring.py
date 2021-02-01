@@ -19,7 +19,10 @@ class Keyring(object):
 
     # Public method for removing the entire OS keyring object
     def delete_all_data(self):
-        if keyring.get_password(self._keyring_service, self._keyring_username) is not None:
+        if (
+            keyring.get_password(self._keyring_service, self._keyring_username)
+            is not None
+        ):
             keyring.delete_password(self._keyring_service, self._keyring_username)
         self._load()
 
@@ -116,7 +119,9 @@ class Keyring(object):
         self._jumpcloud_password = keyring_data.get("jumpcloud_password") or None
         timestamp = keyring_data.get("jumpcloud_timestamp")
         if timestamp:
-            self._jumpcloud_timestamp = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+            self._jumpcloud_timestamp = datetime.fromtimestamp(
+                timestamp, tz=timezone.utc
+            )
         else:
             self._jumpcloud_timestamp = None
 
@@ -140,7 +145,9 @@ class Keyring(object):
             return json.loads(json_data)
 
     def _purge_expired_sessions(self):
-        expired_sessions = [name for (name, session) in self._aws_sessions.items() if session.expired()]
+        expired_sessions = [
+            name for (name, session) in self._aws_sessions.items() if session.expired()
+        ]
         for p in expired_sessions:
             del self._aws_sessions[p]
         if expired_sessions:
@@ -152,11 +159,15 @@ class Keyring(object):
             timestamp = self._jumpcloud_timestamp.timestamp()
         else:
             timestamp = None
-        json_data = json.dumps({
-            "jumpcloud_email": self._jumpcloud_email,
-            "jumpcloud_password": self._jumpcloud_password,
-            "jumpcloud_timestamp": timestamp,
-            "profiles": [p.dumps() for p in self._profiles.values()],
-            "aws_sessions": dict([(k, v.dumps()) for (k, v) in self._aws_sessions.items()])
-        })
+        json_data = json.dumps(
+            {
+                "jumpcloud_email": self._jumpcloud_email,
+                "jumpcloud_password": self._jumpcloud_password,
+                "jumpcloud_timestamp": timestamp,
+                "profiles": [p.dumps() for p in self._profiles.values()],
+                "aws_sessions": dict(
+                    [(k, v.dumps()) for (k, v) in self._aws_sessions.items()]
+                ),
+            }
+        )
         keyring.set_password(self._keyring_service, self._keyring_username, json_data)
