@@ -1,4 +1,10 @@
-# aws-jumpcloud
+[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
+
+# DEPRECATION MESSAGE
+
+We are deprecating this repository and would like to offer the opportunity for somebody to fork it. If you do fork it, please let us know and we will add a link to the new repository.
+
+# DEPRECATED aws-jumpcloud
 
 Allows you to authenticate with AWS using your JumpCloud credentials. Based on ideas from [aws-vault](https://github.com/99designs/aws-vault), [aws-okta](https://github.com/segmentio/aws-okta/), and [jumpcloud_aws](https://github.com/synaptic-cl/jumpcloud_aws).
 
