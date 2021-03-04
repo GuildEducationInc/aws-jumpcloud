@@ -10,7 +10,7 @@ import boto3
 from aws_jumpcloud.saml import get_assertion_duration
 
 # Regular expression to extract an account number and role name from an ARN.
-ROLE_ARN_REGEXP = re.compile(r"^arn:aws:iam::([0-9]{12}):role/([\w+=,.@-]+)$")
+ROLE_ARN_REGEXP = re.compile(r"^arn:aws:iam::([0-9]{12}):role/([\w+=,.@-]+.*$)")
 ParseResult = namedtuple("ArnParts", ["aws_account_id", "aws_role"])
 
 # If the SAML assertion from JumpCloud doesn't include a SessionDuration
