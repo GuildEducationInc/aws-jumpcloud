@@ -57,17 +57,11 @@ jobs:
               LICENSE
               dist/*
         - uses: actions/checkout@v1
-        - name: Setup SSH
-          uses: MrSquaare/ssh-setup-action@v1
-          with:
-            host: github.com
-            private-key: ${{ secrets.AWS_JUMPCLOUD_DEPLOY_KEY }}
         - name: Release Homebrew Formula
-          uses: ryanjfrizzell/update-homebrew-action@v1.0.4
+          uses: CirrusMD/github-action-homebrew-release@v1.0.0
           if: ${{ success() }}
           with:
-            packageName: 'aws-jumpcloud'
-            templatePath: 'HomebrewFormula/aws-jumpcloud.rb'
-            tapRepo: 'CirrusMD/homebrew-aws-jumpcloud'
-            srcRepo: 'CirrusMD/aws-jumpcloud'
-            authToken: ${{ secrets.AWS_JUMPCLOUD_GH_TOKEN }}
+            gh-token: ${{ secrets.GITHUB_TOKEN }}
+            homebrew-gh-token: ${{ secrets.AWS_JUMPCLOUD_GH_TOKEN }}
+            homebrew-repo: CirrusMD/homebrew-aws-jumpcloud
+            source-template-path: HomebrewFormula/aws-jumpcloud.rb
