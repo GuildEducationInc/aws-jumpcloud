@@ -2,7 +2,8 @@
 
 # DEPRECATION MESSAGE
 
-We are deprecating this repository and would like to offer the opportunity for somebody to fork it. If you do fork it, please let us know and we will add a link to the new repository.
+We've deprecated this repository. Please head to the new repository https://github.com/CirrusMD/aws-jumpcloud.
+
 
 # DEPRECATED aws-jumpcloud
 
