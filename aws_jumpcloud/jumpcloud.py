@@ -144,7 +144,7 @@ class JumpCloudError(Exception):
         self.response = resp
         try:
             self.jumpcloud_error_message = resp.json().get("error")
-        except Exception:
+        except JSONDecodeError:
             self.jumpcloud_error_message = resp.text
 
 
