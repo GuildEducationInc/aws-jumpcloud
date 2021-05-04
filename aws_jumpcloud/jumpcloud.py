@@ -1,6 +1,6 @@
 import base64
 from datetime import datetime, timezone
-from json import JSONDecodeError
+from simplejson.errors import JSONDecodeError
 import sys
 
 from bs4 import BeautifulSoup  # pylint: disable=E0401
@@ -144,8 +144,8 @@ class JumpCloudError(Exception):
         self.response = resp
         try:
             self.jumpcloud_error_message = resp.json().get("error")
-        except JSONDecodeError:
-            self.jumpcloud_error_message = None
+        except Exception:
+            self.jumpcloud_error_message = resp.text
 
 
 class JumpCloudServerError(JumpCloudError):
