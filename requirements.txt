@@ -3,3 +3,4 @@ boto3
 keyring
 lxml
 requests
+simplejson
