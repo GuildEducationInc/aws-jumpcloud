@@ -11,8 +11,11 @@ jobs:
       max-parallel: 4
       matrix:
         config:
-          - os: macos-latest
-            os-friendly: macos
+          - os: macos-11
+            os-friendly: macos11
+            python-version: '3.8'
+          - os: macos-10.15
+            os-friendly: macos10-15
             python-version: '3.8'
           - os: ubuntu-latest
             os-friendly: ubuntu
@@ -41,27 +44,27 @@ jobs:
           name: aws-jumpcloud-artifacts
           path: dist/*
   release:
-      needs: build
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/download-artifact@v2
-          with:
-            name: aws-jumpcloud-artifacts
-            path: dist/*
-        - name: Release
-          uses: "marvinpinto/action-automatic-releases@latest"
-          with:
-            repo_token: "${{ secrets.GITHUB_TOKEN }}"
-            prerelease: false
-            files: |
-              LICENSE
-              dist/*
-        - uses: actions/checkout@v1
-        - name: Release Homebrew Formula
-          uses: CirrusMD/github-action-homebrew-release@v1.0.0
-          if: ${{ success() }}
-          with:
-            gh-token: ${{ secrets.GITHUB_TOKEN }}
-            homebrew-gh-token: ${{ secrets.AWS_JUMPCLOUD_GH_TOKEN }}
-            homebrew-repo: CirrusMD/homebrew-aws-jumpcloud
-            source-template-path: HomebrewFormula/aws-jumpcloud.rb
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: aws-jumpcloud-artifacts
+          path: dist/*
+      - name: Release
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          files: |
+            LICENSE
+            dist/*
+      - uses: actions/checkout@v1
+      - name: Release Homebrew Formula
+        uses: CirrusMD/github-action-homebrew-release@v1.0.0
+        if: ${{ success() }}
+        with:
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          homebrew-gh-token: ${{ secrets.AWS_JUMPCLOUD_GH_TOKEN }}
+          homebrew-repo: CirrusMD/homebrew-aws-jumpcloud
+          source-template-path: HomebrewFormula/aws-jumpcloud.rb
