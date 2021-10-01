@@ -9,6 +9,9 @@ ITEM = "jumpcloud"
 
 def installed():
     hasop = which("op") is not None and which("op") is not True
+    disableop = os.getenv("AWS_JUMPCLOUD_DISABLE_OP") == "true"
+    if disableop:
+        hasop = False
     if hasop:
         if os.getenv("OP_SUBDOMAIN") and subprocess.call(
             "op get account", shell=True
